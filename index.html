@@ -778,8 +778,12 @@ async function init(){
     showToast('⚠ DB error - mode terbatas');
   }
   // Jika dibuka dari GAS, URL otomatis tersedia
-  // Netlify version: selalu ambil URL dari localStorage/IndexedDB
-  try { gasUrl=await cfgGet('gasUrl')||''; } catch(e){ gasUrl=localStorage.getItem('gasUrl')||''; }
+  // Netlify: baca URL dari localStorage (primary) atau IndexedDB
+  gasUrl = localStorage.getItem('gasUrl') || '';
+  if(!gasUrl){
+    try { gasUrl=await cfgGet('gasUrl')||''; } catch(e){}
+  }
+  console.log('KirimLog init, gasUrl:', gasUrl ? gasUrl.substring(0,50)+'...' : 'KOSONG');
   try { currentAdmin=await cfgGet('currentAdmin')||''; } catch(e){ currentAdmin=localStorage.getItem('currentAdmin')||''; }
   if(gasUrl) document.getElementById('gasUrlInput').value=gasUrl;
 
@@ -859,12 +863,18 @@ function pullFromSheets(silent){
   };
   var s=document.createElement('script');
   s.id='_pullScript';
-  s.src=gasUrl+'?action=getData&callback='+cbName+'&t='+Date.now();
+  var fullUrl=gasUrl+'?action=getData&callback='+cbName+'&t='+Date.now();
+  s.src=fullUrl;
+  console.log('JSONP URL:', fullUrl);
   s.onerror=function(){
     clearTimeout(_pullTimer);
     if(window[cbName]) delete window[cbName];
     _liveLoading=false;
-    showToast('⚠ Gagal — pastikan Apps Script sudah Deploy Baru');
+    showToast('⚠ Gagal load data. Cek: URL benar? Sudah Deploy Baru?');
+    var dot=document.getElementById('syncDot');
+    var lbl=document.getElementById('syncLabel');
+    if(dot) dot.className='sync-dot';
+    if(lbl) lbl.textContent='Gagal — tap Refresh untuk coba lagi';
     renderHome(); updateKurangBadge();
   };
   document.head.appendChild(s);
@@ -2234,7 +2244,13 @@ async function saveGasUrl(){
   gasUrl=url;
   localStorage.setItem('gasUrl',url);
   try { await cfgSet('gasUrl',url); } catch(e){}
-  updateConnDot(); showToast('✅ URL tersimpan');
+  updateConnDot();
+  showToast('✅ URL tersimpan — memuat data...');
+  // Langsung pull data setelah simpan URL
+  setTimeout(function(){
+    pullFromSheets();
+    pullProdukFromSheets();
+  }, 500);
 }
 async function testConn(){
   const url=document.getElementById('gasUrlInput').value.trim();
