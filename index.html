@@ -888,8 +888,31 @@ function _onPullData(data){
     dbGetAll('entries').then(function(local){ _liveData=local; renderHome(); updateKurangBadge(); });
     return;
   }
+  // Handle format summary (dari getDashboardSummary) ATAU rows (raw)
+  var rawRows = data.rows || [];
+
+  // Kalau summary format, konversi kurangList jadi rows sederhana
+  // tapi kita butuh semua data — request ulang dengan action=getRows
+  if(data.summary && !rawRows.length){
+    // Data summary tidak punya rows lengkap, request raw data
+    var old2=document.getElementById('_pullScript2');
+    if(old2) old2.remove();
+    var cb2='_cbRows'+Date.now();
+    window[cb2]=function(d2){
+      delete window[cb2];
+      var el=document.getElementById('_pullScript2');
+      if(el) el.remove();
+      if(d2&&d2.ok&&d2.rows) _onPullData(d2);
+    };
+    var s2=document.createElement('script');
+    s2.id='_pullScript2';
+    s2.src=gasUrl+'?action=getRows&callback='+cb2+'&t='+Date.now();
+    document.head.appendChild(s2);
+    return;
+  }
+
   // Convert format Sheets ke format app
-  _liveData=(data.rows||[]).map(function(r,i){
+  _liveData=(rawRows).map(function(r,i){
     return {
       id: r.id||i,
       orderId: r.noOrderan||'',
