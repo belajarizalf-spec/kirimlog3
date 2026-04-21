@@ -508,18 +508,34 @@ function genAI(){
     'Berikan analisis singkat dan 3-5 saran spesifik meningkatkan penjualan bulan depan. '+
     'Fokus: produk yang perlu ditingkatkan stok, channel yang perlu dioptimasi, dan perbaikan operasional. '+
     'Bahasa Indonesia, lugas, pakai poin. Maksimal 200 kata.';
-  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:prompt}]})})
-  .then(function(r){return r.json();})
-  .then(function(data){
-    var txt=(data.content&&data.content[0])?data.content[0].text:'Tidak dapat menganalisis.';
-    _aiInsight=txt;
-    var ac2=$('aiCard');
-    if(ac2)ac2.innerHTML='<div class="ai-hdr"><span style="font-size:20px">🧠</span><div><div class="ai-title">Saran AI</div><div class="ai-sub">'+mL+'</div></div></div><div class="ai-body">'+txt.replace(/\n/g,'<br>')+'</div><button class="ai-btn" onclick="genAI()">↻ Generate ulang</button>';
-  })
-  .catch(function(){
+  // Kirim prompt ke GAS (API key aman di server)
+  var cbAI='_cbAI'+Date.now();
+  var oldAI=document.getElementById('_aiJs');if(oldAI)oldAI.remove();
+  window[cbAI]=function(data){
+    delete window[cbAI];
+    var el=document.getElementById('_aiJs');if(el)el.remove();
+    var ac2=$('aiCard');if(!ac2)return;
+    if(!data||!data.ok){
+      ac2.innerHTML='<div class="ai-hdr"><span style="font-size:20px">🧠</span><div><div class="ai-title">Saran AI</div></div></div>'+
+        '<div style="color:#a5b4fc;font-size:13px;margin-bottom:8px">❌ '+(data&&data.error?data.error:'Gagal menghubungi AI')+'</div>'+
+        '<button class="ai-btn" onclick="genAI()">↻ Coba lagi</button>';
+      return;
+    }
+    _aiInsight=data.text;
+    ac2.innerHTML='<div class="ai-hdr"><span style="font-size:20px">🧠</span><div><div class="ai-title">Saran AI</div><div class="ai-sub">'+mL+'</div></div></div>'+
+      '<div class="ai-body">'+data.text.replace(/\n/g,'<br>')+'</div>'+
+      '<button class="ai-btn" onclick="genAI()">↻ Generate ulang</button>';
+  };
+  var sAI=document.createElement('script');sAI.id='_aiJs';
+  sAI.src=GAS_URL+'?action=getAI&callback='+cbAI+'&prompt='+encodeURIComponent(prompt)+'&t='+Date.now();
+  sAI.onerror=function(){
+    delete window[cbAI];
     var ac3=$('aiCard');
-    if(ac3)ac3.innerHTML='<div class="ai-hdr"><span style="font-size:20px">🧠</span><div><div class="ai-title">Saran AI</div></div></div><div style="color:#a5b4fc;font-size:13px;margin-bottom:8px">❌ Perlu API key Anthropic.<br>Tambahkan header x-api-key di fungsi genAI di file owner.html.</div><button class="ai-btn" onclick="genAI()">↻ Coba lagi</button>';
-  });
+    if(ac3)ac3.innerHTML='<div class="ai-hdr"><span style="font-size:20px">🧠</span><div><div class="ai-title">Saran AI</div></div></div>'+
+      '<div style="color:#a5b4fc;font-size:13px;margin-bottom:8px">❌ Gagal menghubungi server AI.</div>'+
+      '<button class="ai-btn" onclick="genAI()">↻ Coba lagi</button>';
+  };
+  document.head.appendChild(sAI);
 }
 
 // RINGKASAN HARIAN
