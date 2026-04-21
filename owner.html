@@ -160,42 +160,38 @@ function fmtDay(dk){var d=new Date(dk+'T00:00:00');return DAYS[d.getDay()]+' '+d
 function loadData(){
   var btn=$('btnRefresh');if(btn)btn.textContent='⟳...';
   if(!GAS_URL){showErr('Tambahkan ?gasUrl=URL_APPS_SCRIPT di address bar');return;}
-  var params='?action=getDashboardV2&mode='+_mode+'&year='+_year+'&month='+_month+'&channel='+encodeURIComponent(_channel);
-  if(_mode==='custom')params+='&dateFrom='+_dateFrom+'&dateTo='+_dateTo;
   if(_timer)clearTimeout(_timer);
-  var cb='_cb'+Date.now(), old=$('_dsJs');if(old)old.remove();
+  set('content','<div class="loading"><div class="spinner"></div><div style="font-size:13px;color:var(--t2);font-weight:500;text-align:center">Memuat data...<br><small style="color:var(--t3)">5-10 detik</small></div></div>');
+  var cb='_cb'+Date.now();
+  var old=document.getElementById('_dsJs');if(old)old.remove();
   window[cb]=function(data){
-    clearTimeout(_timer);if(btn)btn.textContent='↻ Refresh';
-    delete window[cb];var el=$('_dsJs');if(el)el.remove();
+    clearTimeout(_timer);
+    if(btn)btn.textContent='↻ Refresh';
+    delete window[cb];
+    var el=document.getElementById('_dsJs');if(el)el.remove();
     if(!data||!data.ok){showErr('Error: '+(data&&data.error?data.error:''));return;}
-    _d=data;render();
+    _d={ok:true,mode:_mode,
+      channels:data.channels||[],
+      kpi:data.kpi||{total:0,lengkap:0,kurang:0,pcs:0},
+      kpiToday:data.kpiToday||{total:0,lengkap:0,kurang:0,pcs:0},
+      kpiPrev:data.kpiPrev||{},
+      kpiPrevYear:data.kpiPrevYear||{},
+      daily:data.daily||[],
+      adminPerf:data.adminPerf||[],
+      jamStats:data.jamStats||[],
+      topAll:data.topAll||data.topMonth||[],
+      channelData:data.channelData||[],
+      kurangList:data.kurangList||[],
+      barangKurang:data.barangKurang||[]
+    };
+    render();
   };
   var s=document.createElement('script');s.id='_dsJs';
-  s.src=GAS_URL+params+'&callback='+cb+'&t='+Date.now();
-  s.onerror=function(){
-    if(btn)btn.textContent='↻ Refresh';
-    // Fallback ke getDashboard
-    var cb2='_cbF'+Date.now(),old2=document.getElementById('_dsJs2');if(old2)old2.remove();
-    window[cb2]=function(data){
-      clearTimeout(_timer);if(btn)btn.textContent='↻ Refresh';
-      delete window[cb2];var el=document.getElementById('_dsJs2');if(el)el.remove();
-      if(!data||!data.ok){showErr('Error: '+(data&&data.error?data.error:'unknown'));return;}
-      _d={ok:true,mode:_mode,channels:[],
-          kpi:data.kpi||{},kpiToday:data.kpiToday||{},kpiPrev:{},kpiPrevYear:{},
-          daily:data.daily||[],adminPerf:data.adminPerf||[],jamStats:data.jamStats||[],
-          topAll:data.topAll||[],channelData:data.channelData||[],
-          kurangList:data.kurangList||[],barangKurang:data.barangKurang||[]};
-      render();
-    };
-    var s2=document.createElement('script');s2.id='_dsJs2';
-    s2.src=GAS_URL+'?action=getDashboard&callback='+cb2+'&t='+Date.now();
-    s2.onerror=function(){showErr('Gagal memuat. Pastikan sudah Deploy Baru di Apps Script.');};
-    document.head.appendChild(s2);
-  };
+  s.src=GAS_URL+'?action=getData&callback='+cb+'&t='+Date.now();
+  s.onerror=function(){if(btn)btn.textContent='↻ Refresh';showErr('Gagal memuat. Cek URL Apps Script.');};
   document.head.appendChild(s);
   _timer=setTimeout(function(){if(document.querySelector('.spinner')){if(btn)btn.textContent='↻ Refresh';showErr('Timeout. Tap Refresh.');}},25000);
 }
-
 function showErr(m){set('content','<div class="err-box">❌ '+m+'</div><button onclick="loadData()" class="btn-sm">↻ Coba lagi</button>');}
 
 function buildPeriodBar(){
