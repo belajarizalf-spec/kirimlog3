@@ -172,7 +172,26 @@ function loadData(){
   };
   var s=document.createElement('script');s.id='_dsJs';
   s.src=GAS_URL+params+'&callback='+cb+'&t='+Date.now();
-  s.onerror=function(){if(btn)btn.textContent='↻ Refresh';showErr('Gagal memuat. Cek URL Apps Script + Deploy Baru.');};
+  s.onerror=function(){
+    if(btn)btn.textContent='↻ Refresh';
+    // Fallback ke getDashboard
+    var cb2='_cbF'+Date.now(),old2=document.getElementById('_dsJs2');if(old2)old2.remove();
+    window[cb2]=function(data){
+      clearTimeout(_timer);if(btn)btn.textContent='↻ Refresh';
+      delete window[cb2];var el=document.getElementById('_dsJs2');if(el)el.remove();
+      if(!data||!data.ok){showErr('Error: '+(data&&data.error?data.error:'unknown'));return;}
+      _d={ok:true,mode:_mode,channels:[],
+          kpi:data.kpi||{},kpiToday:data.kpiToday||{},kpiPrev:{},kpiPrevYear:{},
+          daily:data.daily||[],adminPerf:data.adminPerf||[],jamStats:data.jamStats||[],
+          topAll:data.topAll||[],channelData:data.channelData||[],
+          kurangList:data.kurangList||[],barangKurang:data.barangKurang||[]};
+      render();
+    };
+    var s2=document.createElement('script');s2.id='_dsJs2';
+    s2.src=GAS_URL+'?action=getDashboard&callback='+cb2+'&t='+Date.now();
+    s2.onerror=function(){showErr('Gagal memuat. Pastikan sudah Deploy Baru di Apps Script.');};
+    document.head.appendChild(s2);
+  };
   document.head.appendChild(s);
   _timer=setTimeout(function(){if(document.querySelector('.spinner')){if(btn)btn.textContent='↻ Refresh';showErr('Timeout. Tap Refresh.');}},25000);
 }
