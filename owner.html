@@ -162,33 +162,60 @@ function loadData(){
   if(!GAS_URL){showErr('Tambahkan ?gasUrl=URL_APPS_SCRIPT di address bar');return;}
   if(_timer)clearTimeout(_timer);
   set('content','<div class="loading"><div class="spinner"></div><div style="font-size:13px;color:var(--t2);font-weight:500;text-align:center">Memuat data...<br><small style="color:var(--t3)">5-10 detik</small></div></div>');
+
   var cb='_cb'+Date.now();
   var old=document.getElementById('_dsJs');if(old)old.remove();
+
   window[cb]=function(data){
     clearTimeout(_timer);
     if(btn)btn.textContent='↻ Refresh';
     delete window[cb];
     var el=document.getElementById('_dsJs');if(el)el.remove();
     if(!data||!data.ok){showErr('Error: '+(data&&data.error?data.error:''));return;}
+    // Normalize data
     _d={ok:true,mode:_mode,
       channels:data.channels||[],
-      kpi:data.kpi||{total:0,lengkap:0,kurang:0,pcs:0},
-      kpiToday:data.kpiToday||{total:0,lengkap:0,kurang:0,pcs:0},
-      kpiPrev:data.kpiPrev||{},
-      kpiPrevYear:data.kpiPrevYear||{},
-      daily:data.daily||[],
-      adminPerf:data.adminPerf||[],
-      jamStats:data.jamStats||[],
+      kpi:data.kpi||{},kpiToday:data.kpiToday||{},
+      kpiPrev:data.kpiPrev||{},kpiPrevYear:data.kpiPrevYear||{},
+      daily:data.daily||[],adminPerf:data.adminPerf||[],jamStats:data.jamStats||[],
       topAll:data.topAll||data.topMonth||[],
       channelData:data.channelData||[],
-      kurangList:data.kurangList||[],
-      barangKurang:data.barangKurang||[]
+      kurangList:data.kurangList||[],barangKurang:data.barangKurang||[]
     };
     render();
   };
-  var s=document.createElement('script');s.id='_dsJs';
-  s.src=GAS_URL+'?action=getData&callback='+cb+'&t='+Date.now();
-  s.onerror=function(){if(btn)btn.textContent='↻ Refresh';showErr('Gagal memuat. Cek URL Apps Script.');};
+
+  // Build URL — coba getDashboardV2 dulu (support filter)
+  var url;
+  var baseParams = 'year='+_year+'&month='+_month+'&channel='+encodeURIComponent(_channel);
+  if(_mode==='custom' && _dateFrom && _dateTo){
+    url = GAS_URL+'?action=getDashboardV2&mode=custom&dateFrom='+_dateFrom+'&dateTo='+_dateTo+'&'+baseParams+'&callback='+cb+'&t='+Date.now();
+  } else {
+    url = GAS_URL+'?action=getDashboardV2&mode='+_mode+'&'+baseParams+'&callback='+cb+'&t='+Date.now();
+  }
+
+  var s=document.createElement('script');s.id='_dsJs';s.src=url;
+  s.onerror=function(){
+    // Fallback: getData (semua data, tanpa filter)
+    var cbF='_cbF'+Date.now();
+    var oldF=document.getElementById('_dsJsF');if(oldF)oldF.remove();
+    window[cbF]=function(data){
+      clearTimeout(_timer);if(btn)btn.textContent='↻ Refresh';
+      delete window[cbF];var el=document.getElementById('_dsJsF');if(el)el.remove();
+      if(!data||!data.ok){showErr('Error: '+(data&&data.error?data.error:''));return;}
+      _d={ok:true,mode:_mode,channels:data.channels||[],
+        kpi:data.kpi||{},kpiToday:data.kpiToday||{},kpiPrev:{},kpiPrevYear:{},
+        daily:data.daily||[],adminPerf:data.adminPerf||[],jamStats:data.jamStats||[],
+        topAll:data.topAll||data.topMonth||[],channelData:data.channelData||[],
+        kurangList:data.kurangList||[],barangKurang:data.barangKurang||[]
+      };
+      render();
+    };
+    var sF=document.createElement('script');sF.id='_dsJsF';
+    sF.src=GAS_URL+'?action=getData&callback='+cbF+'&t='+Date.now();
+    sF.onerror=function(){if(btn)btn.textContent='↻ Refresh';showErr('Gagal memuat. Cek URL Apps Script.');};
+    document.head.appendChild(sF);
+  };
   document.head.appendChild(s);
   _timer=setTimeout(function(){if(document.querySelector('.spinner')){if(btn)btn.textContent='↻ Refresh';showErr('Timeout. Tap Refresh.');}},25000);
 }
@@ -273,7 +300,7 @@ function render(){
   h+=kBoxD(kpi.total,'Total Kirim','var(--blue)',kpip.total);
   h+=kBoxD(kpi.lengkap,'Lengkap','var(--green)',kpip.lengkap);
   h+=kBoxD(kpi.kurang,'Tidak Lengkap','var(--red)',kpip.kurang,true);
-  h+=kBoxD(pct+'%','% Lengkap',pctC,kpip.total>0?Math.round((kpip.lengkap||0)/kpip.total*100):0,false,'%');
+  h+=kBoxD(pct+'%','% Lengkap',pctC,kpip&&kpip.total>0?Math.round((kpip.lengkap||0)/kpip.total*100):0,false,'');
   h+='</div>';
 
   // PERBANDINGAN
@@ -412,18 +439,22 @@ function kBox(n,label,color,sm){return '<div class="kpi"><div class="kpi-n'+(sm?
 function kBoxD(n,label,color,prev,invertGood,suf){
   suf=suf||'';
   var nv=typeof n==='string'?parseInt(n):n;
+  prev=prev||0;
   var delta=nv-prev,pct2=prev>0?Math.round(delta/prev*100):0;
   var dStr=prev>0?((pct2>0?'▲':'▼')+Math.abs(pct2)+'% vs lalu'):'';
   var dCls=delta===0?'deq':((invertGood?delta<0:delta>0)?'du':'dd');
   return '<div class="kpi"><div class="kpi-n sm" style="color:'+color+'">'+n+suf+'</div><div class="kpi-l">'+label+'</div>'+(dStr?'<div class="kpi-d '+dCls+'">'+dStr+'</div>':'')+'</div>';
 }
 function compCard(lbl,kpi){
-  var p=kpi&&kpi.total>0?Math.round(kpi.lengkap/kpi.total*100):0;
+  var k=kpi||{total:0,lengkap:0,kurang:0};
+  var total=k.total||0,lengkap=k.lengkap||0,kurang=k.kurang||0;
+  var p=total>0?Math.round(lengkap/total*100):0;
   var pc=p>=90?'var(--green)':p>=70?'var(--amber)':'var(--red)';
+  if(total===0) return '<div class="comp-card"><div class="comp-lbl">'+lbl+'</div><div style="color:var(--t3);font-size:12px;padding:8px 0">Belum ada data</div></div>';
   return '<div class="comp-card"><div class="comp-lbl">'+lbl+'</div>'+
-    '<div class="comp-row"><span>Total</span><span class="comp-val" style="color:var(--blue)">'+(kpi?kpi.total:0)+'</span></div>'+
-    '<div class="comp-row"><span>Lengkap</span><span class="comp-val" style="color:var(--green)">'+(kpi?kpi.lengkap:0)+'</span></div>'+
-    '<div class="comp-row"><span>Kurang</span><span class="comp-val" style="color:var(--red)">'+(kpi?kpi.kurang:0)+'</span></div>'+
+    '<div class="comp-row"><span>Total</span><span class="comp-val" style="color:var(--blue)">'+total+'</span></div>'+
+    '<div class="comp-row"><span>Lengkap</span><span class="comp-val" style="color:var(--green)">'+lengkap+'</span></div>'+
+    '<div class="comp-row"><span>Kurang</span><span class="comp-val" style="color:var(--red)">'+kurang+'</span></div>'+
     '<div class="comp-row"><span>% OK</span><span class="comp-val" style="color:'+pc+'">'+p+'%</span></div></div>';
 }
 function aKpi(n,lbl,color){return '<div class="kpi"><div class="kpi-n sm" style="color:'+color+'">'+n+'</div><div class="kpi-l">'+lbl+'</div></div>';}
