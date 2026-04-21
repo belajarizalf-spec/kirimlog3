@@ -527,7 +527,9 @@ function genAI(){
       '<button class="ai-btn" onclick="genAI()">↻ Generate ulang</button>';
   };
   var sAI=document.createElement('script');sAI.id='_aiJs';
-  sAI.src=GAS_URL+'?action=getAI&callback='+cbAI+'&prompt='+encodeURIComponent(prompt)+'&t='+Date.now();
+  // Kirim mode/periode ke GAS - prompt dibangun di server
+  var aiUrl=GAS_URL+'?action=getAI&callback='+cbAI+'&mode='+_mode+'&year='+_year+'&month='+_month+'&channel='+encodeURIComponent(_channel)+'&t='+Date.now();
+  sAI.src=aiUrl;
   sAI.onerror=function(){
     delete window[cbAI];
     var ac3=$('aiCard');
