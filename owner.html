@@ -378,8 +378,8 @@ function render(){
   h+='</div>';
 
   // TOP PRODUK
-  h+='<div class="sec">🔥 Top 30 Produk Terlaris</div>';
-  h+=topList(d.topAll||[]);
+  h+='<div class="sec">🔥 Top 60 Produk Terlaris</div>';
+  h+=topList((d.topAll||[]).slice(0,60));
 
   // BARANG KURANG
   h+='<div class="sec">📦 Barang Sering Kurang</div>';
@@ -461,9 +461,14 @@ function aKpi(n,lbl,color){return '<div class="kpi"><div class="kpi-n sm" style=
 function topList(list){
   if(!list||!list.length)return '<div class="tlist"><div class="empty-s">Belum ada data</div></div>';
   var mx=list[0].qty,tot=list.reduce(function(s,p){return s+p.qty;},0);
+  // Hitung persentase dengan floor + koreksi sisa agar total = 100%
+  var floors=list.map(function(p){return Math.floor(p.qty/tot*100);});
+  var rem=100-floors.reduce(function(a,b){return a+b;},0);
+  var rems=list.map(function(p,i){return{i:i,r:(p.qty/tot*100)-floors[i]};}).sort(function(a,b){return b.r-a.r;});
+  for(var ri=0;ri<rem&&ri<rems.length;ri++)floors[rems[ri].i]++;
   var h='<div class="tlist"><div class="thdr"><span>'+list.length+' PRODUK</span><span>'+tot+' PCS TOTAL</span></div>';
   list.forEach(function(p,i){
-    var rc=i===0?'r1':i===1?'r2':i===2?'r3':'rn',pp=Math.round(p.qty/mx*100),sh=Math.round(p.qty/tot*100);
+    var rc=i===0?'r1':i===1?'r2':i===2?'r3':'rn',pp=Math.round(p.qty/mx*100),sh=floors[i];
     var bc=i===0?'var(--blue)':i<3?'var(--green)':'var(--border)';
     h+='<div class="titem"><div class="rnk '+rc+'">'+(i+1)+'</div><div class="tinfo"><div class="tnm">'+p.name+'</div><div class="tsub">'+sh+'% dari total</div></div><div class="bw"><div class="bf" style="width:'+pp+'%;background:'+bc+'"></div></div><div class="tqty">'+p.qty+' pcs</div></div>';
   });
