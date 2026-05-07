@@ -142,7 +142,7 @@ select{appearance:none}
 .sum-chip b.green{color:var(--green)}
 .sum-chip b.red{color:var(--red)}
 .sum-div{width:1px;height:14px;background:var(--b2)}
-.dup-warn{display:none;margin-top:5px;background:var(--amber-l);border:1px solid var(--amber-m);border-radius:var(--rx);padding:7px 10px;font-size:11px;font-weight:600;color:var(--amber);line-height:1.5}
+.dup-warn{display:none;margin-top:5px;background:var(--amber-l);border:1px solid var(--amber-m);border-radius:var(--rx);padding:7px 10px;font-size:11px;font-weight:500;color:var(--amber)}
 
 /* ── BUTTONS ── */
 .btn-primary{width:100%;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;padding:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s}
@@ -377,7 +377,7 @@ select{appearance:none}
         <div>
           <label class="lbl">No. Orderan <span class="req">*</span></label>
           <input class="inp" id="fOrder" placeholder="Contoh: INV-2024-ABC" oninput="onOrderInput()">
-          <div class="dup-warn" id="dupWarn"></div>
+          <div class="dup-warn" id="dupWarn">⚠ No. ini sudah diinput hari ini</div>
         </div>
         <div>
           <label class="lbl">Resi <span class="opt">(opsional)</span></label>
@@ -1343,28 +1343,12 @@ function updateSummaryBar(){
 // ════════════════════════════════════════════════
 // DUPLICATE CHECK
 // ════════════════════════════════════════════════
-function onOrderInput(){
-  const val = document.getElementById('fOrder').value.trim();
-  const warn = document.getElementById('dupWarn');
-  if(!val || val.length < 3){ warn.style.display='none'; return; }
-
-  if(window._editEntryRef && window._editEntryRef.orderId === val){
-    warn.style.display='none'; return;
-  }
-
-  const dup = _liveData.find(function(e){
-    return String(e.orderId||'').trim().toLowerCase() === val.toLowerCase();
-  });
-
-  if(dup){
-    warn.style.display='block';
-    warn.innerHTML = '\u26a0\ufe0f <strong>No. Pesanan sudah pernah diinput!</strong><br>' +
-      '<span style="font-size:11px">Tanggal: ' + (dup.dateDisplay||dup.date) +
-      ' \u00b7 ' + dup.time +
-      ' \u00b7 Admin: ' + (dup.admin||'-') + '</span>';
-  } else {
-    warn.style.display='none';
-  }
+async function onOrderInput(){
+  const val=document.getElementById('fOrder').value.trim();
+  if(val.length!==6){document.getElementById('dupWarn').style.display='none';return;}
+  const all=await dbGetAll('entries');
+  const dup=all.find(e=>e.orderId===val&&e.date===getNow().key);
+  document.getElementById('dupWarn').style.display=dup?'block':'none';
 }
 
 // ════════════════════════════════════════════════
@@ -1408,25 +1392,6 @@ function openPreview(){
   if(!curSumber){showToast('❗ Pilih sumber order');return;}
   if(!curStatus){showToast('❗ Pilih status pengiriman');return;}
   if(curStatus==='kurang'&&!miss.length){showToast('❗ Tambahkan barang kurang');return;}
-
-  // Cek duplikat No. Pesanan
-  var skipDupCheck = window._editEntryRef && window._editEntryRef.orderId === orderId;
-  if(!skipDupCheck){
-    var dupOrder = _liveData.find(function(e){
-      return String(e.orderId||'').trim().toLowerCase() === orderId.toLowerCase();
-    });
-    if(dupOrder){
-      var konfirm = confirm(
-        '\u26a0\ufe0f NO. PESANAN DUPLIKAT!\n\n' +
-        'No. "' + orderId + '" sudah pernah diinput:\n' +
-        '\u2022 Tanggal: ' + (dupOrder.dateDisplay||dupOrder.date) + '\n' +
-        '\u2022 Jam: ' + dupOrder.time + '\n' +
-        '\u2022 Admin: ' + (dupOrder.admin||'-') + '\n\n' +
-        'Kemungkinan DOUBLE INPUT. Tetap lanjut simpan?'
-      );
-      if(!konfirm) return;
-    }
-  }
 
   // Cek duplikat resi
   if(resi && resi !== '-' && resi.length > 3){
@@ -1550,28 +1515,27 @@ async function submitEntry(){
     };
     await dbPut('entries', updated);
 
-    // Sync update ke Sheets
-    if(gasUrl){
-      try{
-        await fetch(gasUrl,{
-          method:'POST', mode:'no-cors',
-          headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({...updated, _action:'editEntry'})
-        });
-        await dbPut('entries',{...updated,synced:true});
-      }catch(err){ console.error('Edit sync error:',err); }
-    }
-
-    // Reset tombol submit
+    // ── Langsung close & reset — sync ke Sheets di background ──
     editingEntryId=null;
     const submitBtn=document.getElementById('submitBtn');
     submitBtn.innerHTML='Preview & Simpan <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     submitBtn.style.background='var(--blue)';
-
     closeModal('previewModal');
     btn.disabled=false; btn.textContent='Simpan Sekarang';
     showToast('✅ Pengiriman diupdate!');
     resetForm(); renderHome(); updateKurangBadge();
+
+    // Sync di background
+    if(gasUrl){
+      fetch(gasUrl,{
+        method:'POST', mode:'no-cors',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({...updated, _action:'editEntry'})
+      }).then(function(){
+        dbPut('entries',{...updated,synced:true});
+        setTimeout(function(){ pullFromSheets(true); }, 1000);
+      }).catch(function(err){ console.error('Edit sync error:',err); });
+    }
     return;
   }
 
@@ -1586,21 +1550,9 @@ async function submitEntry(){
   };
   await dbAdd('entries',entry);
 
-  let synced=false;
-  if(gasUrl){
-    synced=await pushToSheets(entry);
-    if(synced){
-      const all=await dbGetAll('entries');
-      const saved=all[0];
-      if(saved) await dbPut('entries',{...saved,synced:true});
-    }
-  }
-
+  // ── Langsung close & tampilkan sukses — sync ke Sheets di background ──
   closeModal('previewModal');
   btn.disabled=false; btn.textContent='Simpan Sekarang';
-
-  // Tarik ulang data dari Sheets agar semua HP sync
-  setTimeout(function(){ pullFromSheets(true); }, 2000);
 
   const isK=curStatus==='kurang';
   const tp=entry.products.reduce((s,p)=>s+p.qty,0);
@@ -1610,10 +1562,31 @@ async function submitEntry(){
   let body='<strong>#'+entry.orderId+'</strong><br>'+entry.products.map(p=>p.name+' · '+p.qty+'pcs').join('<br>');
   body+='<br><span style="font-size:11px;color:var(--t3)">Total: '+tp+' pcs</span>';
   if(isK) body+='<br><br><span style="color:var(--red);font-weight:600">'+entry.missingItems.map(m=>m.name+' ('+m.qtyMissing+' kur)').join(', ')+'</span>';
-  body+='<br><span style="font-size:11px;color:var(--t3);display:block;margin-top:6px">'+(synced?'☁ Tersync ke Google Sheets':gasUrl?'⚠ Gagal sync — tersimpan lokal':'💾 Tersimpan lokal')+'</span>';
+  body+='<br><span id="syncStatusMsg" style="font-size:11px;color:var(--t3);display:block;margin-top:6px">'+(gasUrl?'⏳ Menyinkronkan ke Sheets...':'💾 Tersimpan lokal')+'</span>';
   document.getElementById('confirmBody').innerHTML=body;
   document.getElementById('confirmBg').classList.add('open');
   updateKurangBadge();
+
+  // Sync ke Sheets di background (tidak menghambat UI)
+  if(gasUrl){
+    pushToSheets(entry).then(function(synced){
+      if(synced){
+        dbGetAll('entries').then(function(all){
+          const saved=all.find(function(x){return x.orderId===entry.orderId&&x.date===entry.date;});
+          if(saved) dbPut('entries',{...saved,synced:true});
+        });
+        const msg=document.getElementById('syncStatusMsg');
+        if(msg) msg.textContent='☁ Tersync ke Google Sheets';
+      } else {
+        const msg=document.getElementById('syncStatusMsg');
+        if(msg) msg.textContent='⚠ Gagal sync — tersimpan lokal';
+      }
+      // Tarik ulang data agar semua HP sync
+      setTimeout(function(){ pullFromSheets(true); }, 1000);
+    }).catch(function(){
+      setTimeout(function(){ pullFromSheets(true); }, 1000);
+    });
+  }
 }
 
 function closeConfirm(){ document.getElementById('confirmBg').classList.remove('open'); }
