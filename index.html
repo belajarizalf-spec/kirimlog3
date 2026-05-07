@@ -142,7 +142,7 @@ select{appearance:none}
 .sum-chip b.green{color:var(--green)}
 .sum-chip b.red{color:var(--red)}
 .sum-div{width:1px;height:14px;background:var(--b2)}
-.dup-warn{display:none;margin-top:5px;background:var(--amber-l);border:1px solid var(--amber-m);border-radius:var(--rx);padding:7px 10px;font-size:11px;font-weight:500;color:var(--amber)}
+.dup-warn{display:none;margin-top:5px;background:var(--amber-l);border:1px solid var(--amber-m);border-radius:var(--rx);padding:7px 10px;font-size:11px;font-weight:600;color:var(--amber);line-height:1.5}
 
 /* ── BUTTONS ── */
 .btn-primary{width:100%;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;padding:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s}
@@ -377,7 +377,7 @@ select{appearance:none}
         <div>
           <label class="lbl">No. Orderan <span class="req">*</span></label>
           <input class="inp" id="fOrder" placeholder="Contoh: INV-2024-ABC" oninput="onOrderInput()">
-          <div class="dup-warn" id="dupWarn">⚠ No. ini sudah diinput hari ini</div>
+          <div class="dup-warn" id="dupWarn"></div>
         </div>
         <div>
           <label class="lbl">Resi <span class="opt">(opsional)</span></label>
@@ -1343,12 +1343,28 @@ function updateSummaryBar(){
 // ════════════════════════════════════════════════
 // DUPLICATE CHECK
 // ════════════════════════════════════════════════
-async function onOrderInput(){
-  const val=document.getElementById('fOrder').value.trim();
-  if(val.length!==6){document.getElementById('dupWarn').style.display='none';return;}
-  const all=await dbGetAll('entries');
-  const dup=all.find(e=>e.orderId===val&&e.date===getNow().key);
-  document.getElementById('dupWarn').style.display=dup?'block':'none';
+function onOrderInput(){
+  const val = document.getElementById('fOrder').value.trim();
+  const warn = document.getElementById('dupWarn');
+  if(!val || val.length < 3){ warn.style.display='none'; return; }
+
+  if(window._editEntryRef && window._editEntryRef.orderId === val){
+    warn.style.display='none'; return;
+  }
+
+  const dup = _liveData.find(function(e){
+    return String(e.orderId||'').trim().toLowerCase() === val.toLowerCase();
+  });
+
+  if(dup){
+    warn.style.display='block';
+    warn.innerHTML = '\u26a0\ufe0f <strong>No. Pesanan sudah pernah diinput!</strong><br>' +
+      '<span style="font-size:11px">Tanggal: ' + (dup.dateDisplay||dup.date) +
+      ' \u00b7 ' + dup.time +
+      ' \u00b7 Admin: ' + (dup.admin||'-') + '</span>';
+  } else {
+    warn.style.display='none';
+  }
 }
 
 // ════════════════════════════════════════════════
@@ -1392,6 +1408,25 @@ function openPreview(){
   if(!curSumber){showToast('❗ Pilih sumber order');return;}
   if(!curStatus){showToast('❗ Pilih status pengiriman');return;}
   if(curStatus==='kurang'&&!miss.length){showToast('❗ Tambahkan barang kurang');return;}
+
+  // Cek duplikat No. Pesanan
+  var skipDupCheck = window._editEntryRef && window._editEntryRef.orderId === orderId;
+  if(!skipDupCheck){
+    var dupOrder = _liveData.find(function(e){
+      return String(e.orderId||'').trim().toLowerCase() === orderId.toLowerCase();
+    });
+    if(dupOrder){
+      var konfirm = confirm(
+        '\u26a0\ufe0f NO. PESANAN DUPLIKAT!\n\n' +
+        'No. "' + orderId + '" sudah pernah diinput:\n' +
+        '\u2022 Tanggal: ' + (dupOrder.dateDisplay||dupOrder.date) + '\n' +
+        '\u2022 Jam: ' + dupOrder.time + '\n' +
+        '\u2022 Admin: ' + (dupOrder.admin||'-') + '\n\n' +
+        'Kemungkinan DOUBLE INPUT. Tetap lanjut simpan?'
+      );
+      if(!konfirm) return;
+    }
+  }
 
   // Cek duplikat resi
   if(resi && resi !== '-' && resi.length > 3){
