@@ -381,7 +381,8 @@ select{appearance:none}
         </div>
         <div>
           <label class="lbl">Resi <span class="opt">(opsional)</span></label>
-          <input class="inp" id="fResi" placeholder="JX123...">
+          <input class="inp" id="fResi" placeholder="JX123..." oninput="checkDupResi()" onpaste="setTimeout(checkDupResi,100)">
+          <div id="resiWarnDup" style="display:none;background:var(--amber-l);border:1px solid var(--amber-m);border-radius:8px;padding:8px 11px;font-size:11px;color:var(--amber);font-weight:600;margin-top:6px;line-height:1.4;gap:6px;align-items:flex-start"></div>
         </div>
       </div>
 
@@ -1353,6 +1354,25 @@ async function onOrderInput(){
 // ════════════════════════════════════════════════
 // PREVIEW
 // ════════════════════════════════════════════════
+function cekDuplikatResi(val){
+  val = (val||'').toUpperCase().trim();
+  var warn = document.getElementById('resiWarning');
+  if(!warn) return;
+  if(!val || val.length < 4){ warn.style.display='none'; return; }
+  var dup = _liveData.find(function(x){
+    return String(x.resi||'').toUpperCase().trim() === val;
+  });
+  if(dup){
+    warn.style.display='block';
+    warn.innerHTML='⚠️ Resi <strong>'+val+'</strong> sudah pernah diinput!<br>'+
+      '<span style="font-size:11px;color:var(--t2)">No. '+dup.orderId+' · '+dup.date+' · '+(dup.admin||'-')+'</span>';
+  } else {
+    warn.style.display='none';
+  }
+}
+
+
+
 function openPreview(){
   const orderId=document.getElementById('fOrder').value.trim();
   const prods=getProducts(), miss=getMissingItems();
@@ -1363,6 +1383,7 @@ function openPreview(){
   if(!photoB64_2){showToast('❗ Foto Paket/Resi wajib');return;}
   if(!orderId){showToast('❗ No. Orderan wajib diisi');return;}
   if(!prods.length){showToast('❗ Minimal 1 produk');return;}
+
   if(!curSumber){
     document.getElementById('chReq').style.display='block';
     document.getElementById('channelGrid').scrollIntoView({behavior:'smooth',block:'center'});
@@ -1371,6 +1392,27 @@ function openPreview(){
   if(!curSumber){showToast('❗ Pilih sumber order');return;}
   if(!curStatus){showToast('❗ Pilih status pengiriman');return;}
   if(curStatus==='kurang'&&!miss.length){showToast('❗ Tambahkan barang kurang');return;}
+
+  // Cek duplikat resi
+  if(resi && resi !== '-' && resi.length > 3){
+    var resiUpper = resi.toUpperCase().trim();
+    var dupResi = _liveData.find(function(x){
+      return String(x.resi||'').toUpperCase().trim() === resiUpper &&
+             (!editingEntryId || x.orderId !== document.getElementById('fOrder').value.trim());
+    });
+    if(dupResi){
+      // Tampilkan konfirmasi, bukan blokir total
+      var konfirm = confirm(
+        '⚠️ RESI DUPLIKAT TERDETEKSI\n\n' +
+        'Resi "' + resi + '" sudah pernah diinput sebelumnya:\n' +
+        '• No. Orderan: ' + dupResi.orderId + '\n' +
+        '• Tanggal: ' + dupResi.date + '\n' +
+        '• Admin: ' + (dupResi.admin||'-') + '\n\n' +
+        'Kemungkinan DOUBLE INPUT. Lanjutkan tetap simpan?'
+      );
+      if(!konfirm) return;
+    }
+  }
 
   const d=getNow(), totalPcs=prods.reduce((s,p)=>s+p.qty,0);
   const resLabel=r=>r==='menyusul'?'📦 Menyusul':r==='refund'?'💰 Refund':'⏳ Belum';
@@ -1415,9 +1457,41 @@ function openPreview(){
 // ════════════════════════════════════════════════
 // SUBMIT
 // ════════════════════════════════════════════════
+async function checkDupResi(){
+  const resi = document.getElementById('fResi').value.trim();
+  const warn = document.getElementById('resiWarnDup');
+  if(!resi){ if(warn) warn.style.display='none'; return; }
+  // Cek di _liveData (data dari Sheets)
+  const dup = _liveData.find(function(e){
+    return e.resi && e.resi.toLowerCase()===resi.toLowerCase();
+  });
+  if(dup && warn){
+    warn.style.display='flex';
+    warn.innerHTML='⚠️ Resi <strong>'+resi+'</strong> sudah pernah diinput (No. '+dup.orderId+' · '+dup.date+'). Berpotensi double resi!';
+  } else if(warn){
+    warn.style.display='none';
+  }
+}
+
 async function submitEntry(){
   const btn=document.getElementById('confirmBtn');
   btn.disabled=true; btn.textContent='Menyimpan...';
+
+  // Cek duplikat resi sebelum submit
+  const resi = document.getElementById('fResi').value.trim();
+  if(resi){
+    const dup = _liveData.find(function(e){
+      // Skip jika sedang edit entry yang sama
+      return e.resi && e.resi.toLowerCase()===resi.toLowerCase() &&
+             !(window._editEntryRef && window._editEntryRef.resi===resi);
+    });
+    if(dup){
+      if(!confirm('⚠️ Resi "'+resi+'" sudah pernah diinput!\n\nNo. Orderan: '+dup.orderId+'\nTanggal: '+dup.date+'\n\nTetap simpan?')){
+        btn.disabled=false; btn.textContent='Simpan & Kirim';
+        return;
+      }
+    }
+  }
 
   const d=getNow();
 
