@@ -1515,27 +1515,28 @@ async function submitEntry(){
     };
     await dbPut('entries', updated);
 
-    // ── Langsung close & reset — sync ke Sheets di background ──
+    // Sync update ke Sheets
+    if(gasUrl){
+      try{
+        await fetch(gasUrl,{
+          method:'POST', mode:'no-cors',
+          headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({...updated, _action:'editEntry'})
+        });
+        await dbPut('entries',{...updated,synced:true});
+      }catch(err){ console.error('Edit sync error:',err); }
+    }
+
+    // Reset tombol submit
     editingEntryId=null;
     const submitBtn=document.getElementById('submitBtn');
     submitBtn.innerHTML='Preview & Simpan <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     submitBtn.style.background='var(--blue)';
+
     closeModal('previewModal');
     btn.disabled=false; btn.textContent='Simpan Sekarang';
     showToast('✅ Pengiriman diupdate!');
     resetForm(); renderHome(); updateKurangBadge();
-
-    // Sync di background
-    if(gasUrl){
-      fetch(gasUrl,{
-        method:'POST', mode:'no-cors',
-        headers:{'Content-Type':'text/plain'},
-        body:JSON.stringify({...updated, _action:'editEntry'})
-      }).then(function(){
-        dbPut('entries',{...updated,synced:true});
-        setTimeout(function(){ pullFromSheets(true); }, 1000);
-      }).catch(function(err){ console.error('Edit sync error:',err); });
-    }
     return;
   }
 
@@ -1549,6 +1550,9 @@ async function submitEntry(){
     date:d.key, dateDisplay:d.disp, time:d.time, timestamp:d.iso, synced:false
   };
   await dbAdd('entries',entry);
+
+  // ── Inject ke _liveData LANGSUNG agar cek duplikat langsung aktif ──
+  _liveData.unshift(entry);
 
   // ── Langsung close & tampilkan sukses — sync ke Sheets di background ──
   closeModal('previewModal');
@@ -1567,13 +1571,16 @@ async function submitEntry(){
   document.getElementById('confirmBg').classList.add('open');
   updateKurangBadge();
 
-  // Sync ke Sheets di background (tidak menghambat UI)
+  // ── Sync ke Sheets di background ──
   if(gasUrl){
     pushToSheets(entry).then(function(synced){
       if(synced){
         dbGetAll('entries').then(function(all){
           const saved=all.find(function(x){return x.orderId===entry.orderId&&x.date===entry.date;});
           if(saved) dbPut('entries',{...saved,synced:true});
+          // Update _liveData entry juga jadi synced
+          const idx=_liveData.findIndex(function(x){return x.orderId===entry.orderId&&x.date===entry.date;});
+          if(idx>=0) _liveData[idx]={..._liveData[idx],synced:true};
         });
         const msg=document.getElementById('syncStatusMsg');
         if(msg) msg.textContent='☁ Tersync ke Google Sheets';
@@ -1581,7 +1588,6 @@ async function submitEntry(){
         const msg=document.getElementById('syncStatusMsg');
         if(msg) msg.textContent='⚠ Gagal sync — tersimpan lokal';
       }
-      // Tarik ulang data agar semua HP sync
       setTimeout(function(){ pullFromSheets(true); }, 1000);
     }).catch(function(){
       setTimeout(function(){ pullFromSheets(true); }, 1000);
