@@ -142,7 +142,7 @@ select{appearance:none}
 .sum-chip b.green{color:var(--green)}
 .sum-chip b.red{color:var(--red)}
 .sum-div{width:1px;height:14px;background:var(--b2)}
-.dup-warn{display:none;margin-top:5px;background:var(--amber-l);border:1px solid var(--amber-m);border-radius:var(--rx);padding:7px 10px;font-size:11px;font-weight:600;color:var(--amber);line-height:1.5}
+.dup-warn{display:none;margin-top:5px;background:var(--amber-l);border:1px solid var(--amber-m);border-radius:var(--rx);padding:7px 10px;font-size:11px;font-weight:500;color:var(--amber)}
 
 /* ── BUTTONS ── */
 .btn-primary{width:100%;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;padding:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s}
@@ -377,7 +377,7 @@ select{appearance:none}
         <div>
           <label class="lbl">No. Orderan <span class="req">*</span></label>
           <input class="inp" id="fOrder" placeholder="Contoh: INV-2024-ABC" oninput="onOrderInput()">
-          <div class="dup-warn" id="dupWarn"></div>
+          <div class="dup-warn" id="dupWarn">⚠ No. ini sudah diinput hari ini</div>
         </div>
         <div>
           <label class="lbl">Resi <span class="opt">(opsional)</span></label>
@@ -1343,29 +1343,12 @@ function updateSummaryBar(){
 // ════════════════════════════════════════════════
 // DUPLICATE CHECK
 // ════════════════════════════════════════════════
-function onOrderInput(){
-  const val = document.getElementById('fOrder').value.trim();
-  const warn = document.getElementById('dupWarn');
-  if(!val || val.length < 3){ warn.style.display='none'; return; }
-
-  // Skip cek kalau sedang mode edit entry yang sama
-  if(window._editEntryRef && window._editEntryRef.orderId === val){
-    warn.style.display='none'; return;
-  }
-
-  const dup = _liveData.find(function(e){
-    return String(e.orderId||'').trim().toLowerCase() === val.toLowerCase();
-  });
-
-  if(dup){
-    warn.style.display='block';
-    warn.innerHTML = '⚠️ <strong>No. Pesanan sudah pernah diinput!</strong><br>' +
-      '<span style="font-size:11px">Tanggal: ' + (dup.dateDisplay||dup.date) +
-      ' · ' + dup.time +
-      ' · Admin: ' + (dup.admin||'-') + '</span>';
-  } else {
-    warn.style.display='none';
-  }
+async function onOrderInput(){
+  const val=document.getElementById('fOrder').value.trim();
+  if(val.length!==6){document.getElementById('dupWarn').style.display='none';return;}
+  const all=await dbGetAll('entries');
+  const dup=all.find(e=>e.orderId===val&&e.date===getNow().key);
+  document.getElementById('dupWarn').style.display=dup?'block':'none';
 }
 
 // ════════════════════════════════════════════════
@@ -1388,7 +1371,31 @@ function cekDuplikatResi(val){
   }
 }
 
-
+function checkDupResi(){
+  var el=document.getElementById('fResi');
+  var warn=document.getElementById('resiWarnDup');
+  var resi=el?el.value.trim():'';
+  if(!resi||resi.length<4){
+    if(el){el.style.borderColor='';el.style.background='';}
+    if(warn) warn.style.display='none';
+    return;
+  }
+  var dup=_liveData.find(function(e){
+    return e.resi && String(e.resi).trim().toLowerCase()===resi.toLowerCase();
+  });
+  if(dup){
+    if(el){el.style.borderColor='var(--red)';el.style.background='var(--red-l)';}
+    if(warn){
+      warn.style.display='block';
+      warn.innerHTML='⚠️ <strong>Resi sudah pernah diinput!</strong><br>'+
+        '<span style="font-size:11px">No. '+dup.orderId+' · '+dup.date+' · Admin: '+(dup.admin||'-')+'</span><br>'+
+        '<span style="font-size:11px;color:var(--red)">Kemungkinan double input — periksa sebelum simpan</span>';
+    }
+  } else {
+    if(el){el.style.borderColor='var(--green)';el.style.background='var(--green-l)';}
+    if(warn) warn.style.display='none';
+  }
+}
 
 function openPreview(){
   const orderId=document.getElementById('fOrder').value.trim();
@@ -1396,10 +1403,22 @@ function openPreview(){
   const notes=document.getElementById('fNotes').value.trim();
   const resi=document.getElementById('fResi').value.trim();
 
-  if(!photoB64){showToast('❗ Foto Produk wajib');return;}
-  if(!photoB64_2){showToast('❗ Foto Paket/Resi wajib');return;}
+  // Saat mode edit, foto lama tetap valid (tidak perlu upload ulang)
+  const isEditMode = !!editingEntryId;
+  if(!photoB64 && !isEditMode){showToast('❗ Foto Produk wajib');return;}
+  if(!photoB64_2 && !isEditMode){showToast('❗ Foto Paket/Resi wajib');return;}
   if(!orderId){showToast('❗ No. Orderan wajib diisi');return;}
   if(!prods.length){showToast('❗ Minimal 1 produk');return;}
+  // Cek duplikat resi
+  if(resi){
+    var dupResi=_liveData.find(function(e){
+      return e.resi && String(e.resi).trim().toLowerCase()===resi.toLowerCase();
+    });
+    if(dupResi){
+      var dupMsg='⚠️ Resi ini sudah pernah diinput!\n\nNo. Orderan: '+dupResi.orderId+'\nTanggal: '+dupResi.date+' '+dupResi.time+'\n\nBerpotensi double resi. Lanjut tetap input?';
+      if(!confirm(dupMsg)) return;
+    }
+  }
 
   if(!curSumber){
     document.getElementById('chReq').style.display='block';
@@ -1410,31 +1429,14 @@ function openPreview(){
   if(!curStatus){showToast('❗ Pilih status pengiriman');return;}
   if(curStatus==='kurang'&&!miss.length){showToast('❗ Tambahkan barang kurang');return;}
 
-  // Cek duplikat No. Pesanan
-  var skipDupCheck = window._editEntryRef && window._editEntryRef.orderId === orderId;
-  if(!skipDupCheck){
-    var dupOrder = _liveData.find(function(e){
-      return String(e.orderId||'').trim().toLowerCase() === orderId.toLowerCase();
-    });
-    if(dupOrder){
-      var konfirm = confirm(
-        '⚠️ NO. PESANAN DUPLIKAT!\n\n' +
-        'No. "' + orderId + '" sudah pernah diinput:\n' +
-        '• Tanggal: ' + (dupOrder.dateDisplay||dupOrder.date) + '\n' +
-        '• Jam: ' + dupOrder.time + '\n' +
-        '• Admin: ' + (dupOrder.admin||'-') + '\n\n' +
-        'Kemungkinan DOUBLE INPUT. Tetap lanjut simpan?'
-      );
-      if(!konfirm) return;
-    }
-  }
-
   // Cek duplikat resi
   if(resi && resi !== '-' && resi.length > 3){
     var resiUpper = resi.toUpperCase().trim();
+    var editRef = window._editEntryRef;
     var dupResi = _liveData.find(function(x){
-      return String(x.resi||'').toUpperCase().trim() === resiUpper &&
-             (!editingEntryId || x.orderId !== document.getElementById('fOrder').value.trim());
+      // Skip entry yang sedang di-edit (berdasarkan orderId + timestamp asli)
+      if(editRef && x.orderId===editRef.orderId && x.timestamp===editRef.timestamp) return false;
+      return String(x.resi||'').toUpperCase().trim() === resiUpper;
     });
     if(dupResi){
       // Tampilkan konfirmasi, bukan blokir total
@@ -1531,27 +1533,25 @@ async function submitEntry(){
 
   const d=getNow();
 
-  // Mode edit: update entry yang sudah ada
+  // Mode edit: update entry yang sudah ada (dari Sheets via _editEntryRef)
   if(editingEntryId){
-    const all=await dbGetAll('entries');
-    const existing=all.find(x=>x.id===editingEntryId);
-    if(!existing){ editingEntryId=null; btn.disabled=false; return; }
+    const ref=window._editEntryRef;
+    if(!ref){ editingEntryId=null; btn.disabled=false; return; }
 
     const updated={
-      ...existing,
+      ...ref,
       orderId:document.getElementById('fOrder').value.trim(),
       resi:document.getElementById('fResi').value.trim(),
       products:getProducts(),
       missingItems:curStatus==='kurang'?getMissingItems():[],
       notes:document.getElementById('fNotes').value.trim(),
-      status:curStatus, sumber:curSumber, admin:currentAdmin,
-      photo:photoB64||existing.photo,
-      photo2:photoB64_2||existing.photo2,
+      status:curStatus, sumber:curSumber||ref.sumber, admin:currentAdmin||ref.admin,
+      photo:photoB64||ref.photo,
+      photo2:photoB64_2||ref.photo2,
       synced:false, _edited:true
     };
-    await dbPut('entries', updated);
 
-    // Sync update ke Sheets
+    // Sync update ke Sheets (editEntry = update row existing, bukan append baru)
     if(gasUrl){
       try{
         await fetch(gasUrl,{
@@ -1559,12 +1559,12 @@ async function submitEntry(){
           headers:{'Content-Type':'text/plain'},
           body:JSON.stringify({...updated, _action:'editEntry'})
         });
-        await dbPut('entries',{...updated,synced:true});
       }catch(err){ console.error('Edit sync error:',err); }
     }
 
-    // Reset tombol submit
+    // Reset
     editingEntryId=null;
+    window._editEntryRef=null;
     const submitBtn=document.getElementById('submitBtn');
     submitBtn.innerHTML='Preview & Simpan <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     submitBtn.style.background='var(--blue)';
@@ -1572,6 +1572,7 @@ async function submitEntry(){
     closeModal('previewModal');
     btn.disabled=false; btn.textContent='Simpan Sekarang';
     showToast('✅ Pengiriman diupdate!');
+    setTimeout(function(){ pullFromSheets(true); }, 1500);
     resetForm(); renderHome(); updateKurangBadge();
     return;
   }
@@ -1587,12 +1588,21 @@ async function submitEntry(){
   };
   await dbAdd('entries',entry);
 
-  // ── Inject ke _liveData LANGSUNG agar cek duplikat langsung aktif ──
-  _liveData.unshift(entry);
+  let synced=false;
+  if(gasUrl){
+    synced=await pushToSheets(entry);
+    if(synced){
+      const all=await dbGetAll('entries');
+      const saved=all[0];
+      if(saved) await dbPut('entries',{...saved,synced:true});
+    }
+  }
 
-  // ── Langsung close & tampilkan sukses — sync ke Sheets di background ──
   closeModal('previewModal');
   btn.disabled=false; btn.textContent='Simpan Sekarang';
+
+  // Tarik ulang data dari Sheets agar semua HP sync
+  setTimeout(function(){ pullFromSheets(true); }, 2000);
 
   const isK=curStatus==='kurang';
   const tp=entry.products.reduce((s,p)=>s+p.qty,0);
@@ -1602,33 +1612,10 @@ async function submitEntry(){
   let body='<strong>#'+entry.orderId+'</strong><br>'+entry.products.map(p=>p.name+' · '+p.qty+'pcs').join('<br>');
   body+='<br><span style="font-size:11px;color:var(--t3)">Total: '+tp+' pcs</span>';
   if(isK) body+='<br><br><span style="color:var(--red);font-weight:600">'+entry.missingItems.map(m=>m.name+' ('+m.qtyMissing+' kur)').join(', ')+'</span>';
-  body+='<br><span id="syncStatusMsg" style="font-size:11px;color:var(--t3);display:block;margin-top:6px">'+(gasUrl?'⏳ Menyinkronkan ke Sheets...':'💾 Tersimpan lokal')+'</span>';
+  body+='<br><span style="font-size:11px;color:var(--t3);display:block;margin-top:6px">'+(synced?'☁ Tersync ke Google Sheets':gasUrl?'⚠ Gagal sync — tersimpan lokal':'💾 Tersimpan lokal')+'</span>';
   document.getElementById('confirmBody').innerHTML=body;
   document.getElementById('confirmBg').classList.add('open');
   updateKurangBadge();
-
-  // ── Sync ke Sheets di background ──
-  if(gasUrl){
-    pushToSheets(entry).then(function(synced){
-      if(synced){
-        dbGetAll('entries').then(function(all){
-          const saved=all.find(function(x){return x.orderId===entry.orderId&&x.date===entry.date;});
-          if(saved) dbPut('entries',{...saved,synced:true});
-          // Update _liveData entry juga jadi synced
-          const idx=_liveData.findIndex(function(x){return x.orderId===entry.orderId&&x.date===entry.date;});
-          if(idx>=0) _liveData[idx]={..._liveData[idx],synced:true};
-        });
-        const msg=document.getElementById('syncStatusMsg');
-        if(msg) msg.textContent='☁ Tersync ke Google Sheets';
-      } else {
-        const msg=document.getElementById('syncStatusMsg');
-        if(msg) msg.textContent='⚠ Gagal sync — tersimpan lokal';
-      }
-      setTimeout(function(){ pullFromSheets(true); }, 1000);
-    }).catch(function(){
-      setTimeout(function(){ pullFromSheets(true); }, 1000);
-    });
-  }
 }
 
 function closeConfirm(){ document.getElementById('confirmBg').classList.remove('open'); }
@@ -1860,7 +1847,7 @@ async function openEdit(idx){
   // Cari dari _entryMap dulu, fallback ke _liveData
   const e=_entryMap[idx]||_liveData.find(function(x){return String(x.id)===String(idx);});
   if(!e) return;
-  editingEntryId=null; // tidak pakai IndexedDB ID
+  editingEntryId='__sheets__'; // flag: edit mode (bukan IndexedDB lokal)
   window._editEntryRef=e; // simpan referensi entry untuk submit
 
   // Pre-fill form dengan data existing
