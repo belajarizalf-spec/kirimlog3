@@ -1346,17 +1346,26 @@ function updateSummaryBar(){
 async function onOrderInput(){
   const val=document.getElementById('fOrder').value.trim();
   const warn=document.getElementById('dupWarn');
-  if(val.length<6){warn.style.display='none';return;}
+  if(val.length<5){warn.style.display='none';return;}
   // Skip cek jika mode edit dan nilai sama dengan entry yang sedang diedit
   const editRef=window._editEntryRef;
   if(editRef && val===editRef.orderId){warn.style.display='none';return;}
-  // Cek di _liveData (dari Sheets, lintas HP)
-  const dup=_liveData.find(function(e){
-    return e.orderId===val && e.date===getNow().key;
+
+  // Cek di _liveData dulu (dari Sheets), fallback ke IndexedDB lokal
+  var dataSource=_liveData;
+  if(!dataSource||dataSource.length===0){
+    try{ dataSource=await dbGetAll('entries'); }catch(e){ dataSource=[]; }
+  }
+
+  // Cek tanpa filter tanggal — no pesanan harus unik sepanjang waktu
+  const valLower=val.toLowerCase();
+  const dup=dataSource.find(function(e){
+    return String(e.orderId||'').toLowerCase()===valLower;
   });
+
   if(dup){
     warn.style.display='block';
-    warn.innerHTML='⚠️ <strong>No. Pesanan sudah pernah diinput!</strong><br>Tanggal: '+dup.date+' · '+dup.time+' · Admin: '+(dup.admin||'-');
+    warn.innerHTML='⚠️ <strong>No. Pesanan sudah pernah diinput!</strong><br><span style="font-size:10px;color:var(--amber)">Tanggal: '+dup.date+' · '+dup.time+' · Admin: '+(dup.admin||'-')+'</span>';
   } else {
     warn.style.display='none';
   }
