@@ -1438,12 +1438,11 @@ function openPreview(){
   if(!photoB64_2 && !isEditMode){showToast('❗ Foto Paket/Resi wajib');return;}
   if(!orderId){showToast('❗ No. Orderan wajib diisi');return;}
   if(!prods.length){showToast('❗ Minimal 1 produk');return;}
-  if(!curSumber){
+  if(!curSumber && !isEditMode){
     document.getElementById('chReq').style.display='block';
     document.getElementById('channelGrid').scrollIntoView({behavior:'smooth',block:'center'});
     showToast('❗ Pilih sumber order');return;
   }
-  if(!curSumber){showToast('❗ Pilih sumber order');return;}
   if(!curStatus){showToast('❗ Pilih status pengiriman');return;}
   if(curStatus==='kurang'&&!miss.length){showToast('❗ Tambahkan barang kurang');return;}
 
@@ -1893,6 +1892,7 @@ async function openEdit(idx){
   if(!e) return;
   editingEntryId='__sheets__'; // flag: edit mode (bukan IndexedDB lokal)
   window._editEntryRef=e; // simpan referensi entry untuk submit
+  curSumber=e.sumber||''; // restore sumber agar validasi tidak blokir
 
   // Pre-fill form dengan data existing
   closeModal('detailModal');
