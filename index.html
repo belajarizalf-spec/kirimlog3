@@ -1573,15 +1573,35 @@ async function submitEntry(){
       synced:false, _edited:true
     };
 
-    // Sync update ke Sheets — kirim originalOrderId agar GAS tahu baris mana yang diedit
+    // Sync update ke Sheets — strip foto dari payload (terlalu besar, tidak perlu diupdate)
     if(gasUrl){
       try{
+        const payload={
+          _action:'editEntry',
+          originalOrderId:ref.orderId,
+          originalDate:ref.date,
+          orderId:updated.orderId,
+          resi:updated.resi,
+          date:updated.date,
+          time:updated.time,
+          admin:updated.admin,
+          status:updated.status,
+          sumber:updated.sumber,
+          notes:updated.notes,
+          products:updated.products,
+          missingItems:updated.missingItems
+        };
+        console.log('Sending editEntry:', payload.originalOrderId, '->', payload.orderId);
         await fetch(gasUrl,{
           method:'POST', mode:'no-cors',
           headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({...updated, _action:'editEntry', originalOrderId:ref.orderId, originalDate:ref.date})
+          body:JSON.stringify(payload)
         });
-      }catch(err){ console.error('Edit sync error:',err); }
+        showToast('✅ Dikirim ke Sheets...');
+      }catch(err){
+        console.error('Edit sync error:',err);
+        showToast('⚠ Gagal kirim ke Sheets: '+err.message);
+      }
     }
 
     // Reset
