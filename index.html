@@ -10,6 +10,7 @@
 <title>KirimLog</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
 <style>
 :root{
   --blue:#2563EB;--blue-l:#EFF6FF;--blue-m:#DBEAFE;
@@ -2532,48 +2533,117 @@ var _scanInterval = null;
 var _scanDetected = '';
 var _scanStableCount = 0;
 
+function _applyScannedValue(val, targetId){
+  var el = document.getElementById(targetId);
+  if(el){
+    el.value = val;
+    el.dispatchEvent(new Event('input'));
+    el.dispatchEvent(new Event('change'));
+  }
+  if(navigator.vibrate) navigator.vibrate([50,30,50]);
+  showToast('✅ Terscan: ' + val);
+  if(targetId === 'fResi') checkDupResi();
+  if(targetId === 'fOrder') onOrderInput();
+}
+
 function handleScanPhoto(e, targetId){
   var file = e.target.files[0];
   if(!file) return;
   e.target.value = '';
-  var img = new Image();
+
+  showToast('Membaca barcode...');
+
   var url = URL.createObjectURL(file);
-  img.onload = function(){
-    var canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    canvas.getContext('2d').drawImage(img, 0, 0);
-    URL.revokeObjectURL(url);
-    if(!('BarcodeDetector' in window)){
-      showToast('Update Chrome ke versi terbaru untuk scan barcode');
+
+  // Coba ZXing dulu (lebih powerful, bisa baca barcode blur/miring)
+  function tryZXing(){
+    if(typeof ZXing === 'undefined'){
+      tryBarcodeDetector();
       return;
     }
-    showToast('Membaca barcode dari foto...');
-    var bd = new BarcodeDetector({
-      formats: ['code_128','code_39','qr_code','ean_13','ean_8','itf','data_matrix','pdf417','aztec','codabar','upc_a','upc_e']
-    });
-    bd.detect(canvas).then(function(barcodes){
-      if(barcodes.length > 0){
-        var val = barcodes[0].rawValue;
-        var el = document.getElementById(targetId);
-        if(el){
-          el.value = val;
-          el.dispatchEvent(new Event('input'));
-          el.dispatchEvent(new Event('change'));
+    try {
+      var hints = new Map();
+      var formats = [
+        ZXing.BarcodeFormat.CODE_128,
+        ZXing.BarcodeFormat.CODE_39,
+        ZXing.BarcodeFormat.QR_CODE,
+        ZXing.BarcodeFormat.EAN_13,
+        ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.ITF,
+        ZXing.BarcodeFormat.DATA_MATRIX,
+        ZXing.BarcodeFormat.PDF_417,
+        ZXing.BarcodeFormat.AZTEC,
+        ZXing.BarcodeFormat.CODABAR,
+        ZXing.BarcodeFormat.UPC_A,
+        ZXing.BarcodeFormat.UPC_E
+      ];
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      var reader = new ZXing.MultiFormatReader();
+      reader.setHints(hints);
+
+      var img = new Image();
+      img.onload = function(){
+        try {
+          var canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          URL.revokeObjectURL(url);
+          var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          var luminanceSource = new ZXing.RGBLuminanceSource(imageData.data, canvas.width, canvas.height);
+          var binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+          var result = reader.decode(binaryBitmap);
+          if(result && result.getText()){
+            _applyScannedValue(result.getText(), targetId);
+          } else {
+            showToast('❌ Barcode tidak terbaca. Foto lebih dekat & pastikan barcode terlihat jelas.');
+          }
+        } catch(decodeErr){
+          // ZXing throw error kalau tidak ketemu barcode
+          showToast('❌ Barcode tidak terbaca. Coba foto lebih dekat & terang.');
         }
-        if(navigator.vibrate) navigator.vibrate([50,30,50]);
-        showToast('✅ Terscan: ' + val);
-        if(targetId === 'fResi') checkDupResi();
-        if(targetId === 'fOrder') onOrderInput();
-      } else {
-        showToast('❌ Barcode tidak terbaca. Foto lebih dekat & pastikan barcode terlihat jelas.');
-      }
-    }).catch(function(){
-      showToast('❌ Gagal membaca barcode dari foto.');
-    });
-  };
-  img.onerror = function(){ showToast('❌ Gagal membuka foto'); };
-  img.src = url;
+      };
+      img.onerror = function(){ showToast('❌ Gagal membuka foto'); URL.revokeObjectURL(url); };
+      img.src = url;
+    } catch(e){
+      tryBarcodeDetector();
+    }
+  }
+
+  // Fallback: BarcodeDetector API bawaan Chrome
+  function tryBarcodeDetector(){
+    if(!('BarcodeDetector' in window)){
+      showToast('❌ Barcode tidak bisa dibaca. Update Chrome ke versi terbaru.');
+      URL.revokeObjectURL(url);
+      return;
+    }
+    var img = new Image();
+    img.onload = function(){
+      var canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      var bd = new BarcodeDetector({
+        formats: ['code_128','code_39','qr_code','ean_13','ean_8','itf','data_matrix','pdf417','aztec','codabar','upc_a','upc_e']
+      });
+      bd.detect(canvas).then(function(barcodes){
+        if(barcodes.length > 0){
+          _applyScannedValue(barcodes[0].rawValue, targetId);
+        } else {
+          showToast('❌ Barcode tidak terbaca. Foto lebih dekat & pastikan barcode terlihat jelas.');
+        }
+      }).catch(function(){
+        showToast('❌ Gagal membaca barcode dari foto.');
+      });
+    };
+    img.onerror = function(){ showToast('❌ Gagal membuka foto'); URL.revokeObjectURL(url); };
+    img.src = url;
+  }
+
+  tryZXing();
 }
 
 
