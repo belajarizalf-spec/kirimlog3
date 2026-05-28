@@ -377,8 +377,9 @@ select{appearance:none}
         <div>
           <label class="lbl">No. Orderan <span class="req">*</span></label>
           <div style="display:flex;gap:6px">
-            <input class="inp" id="fOrder" placeholder="Ketik atau tap 📷 scan..." oninput="onOrderInput()" style="flex:1">
-            <button type="button" onclick="startScan('fOrder')" style="padding:0 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:20px;cursor:pointer;flex-shrink:0;min-width:48px;height:42px;display:flex;align-items:center;justify-content:center" title="Scan Barcode">📷</button>
+            <input class="inp" id="fOrder" placeholder="Ketik atau tap foto untuk scan..." oninput="onOrderInput()" style="flex:1">
+            <button type="button" onclick="document.getElementById('scanInputOrder').click()" style="padding:0 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:20px;cursor:pointer;flex-shrink:0;min-width:48px;height:42px;display:flex;align-items:center;justify-content:center" title="Scan Barcode">📷</button>
+            <input type="file" id="scanInputOrder" accept="image/*" capture="environment" style="display:none" onchange="handleScanPhoto(event,'fOrder')">
           </div>
           <div class="dup-warn" id="dupWarn">⚠ No. ini sudah diinput hari ini</div>
         </div>
@@ -386,7 +387,8 @@ select{appearance:none}
           <label class="lbl">Resi <span class="opt">(opsional)</span></label>
           <div style="display:flex;gap:6px">
             <input class="inp" id="fResi" placeholder="JX123..." oninput="checkDupResi()" onpaste="setTimeout(checkDupResi,100)" style="flex:1">
-            <button type="button" onclick="startScan('fResi')" style="padding:0 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:20px;cursor:pointer;flex-shrink:0;min-width:48px;height:42px;display:flex;align-items:center;justify-content:center" title="Scan Barcode">📷</button>
+            <button type="button" onclick="document.getElementById('scanInputResi').click()" style="padding:0 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:20px;cursor:pointer;flex-shrink:0;min-width:48px;height:42px;display:flex;align-items:center;justify-content:center" title="Scan Barcode">📷</button>
+            <input type="file" id="scanInputResi" accept="image/*" capture="environment" style="display:none" onchange="handleScanPhoto(event,'fResi')">
           </div>
           <div id="resiWarnDup" style="display:none;background:var(--amber-l);border:1px solid var(--amber-m);border-radius:8px;padding:8px 11px;font-size:11px;color:var(--amber);font-weight:600;margin-top:6px;line-height:1.4;gap:6px;align-items:flex-start"></div>
         </div>
@@ -2517,39 +2519,8 @@ function showToast(msg){
 // ════════════════════════════════════════════════
 // START
 // ════════════════════════════════════════════════
-init().then(()=>{
-  renderAdminSetup();
-  // Proaktif cek WebView saat pertama load
-  if(_isUnsafeContext()){
-    // Delay sedikit agar DOM siap
-    setTimeout(showOpenInChromeHint, 800);
-  }
-});
+init().then(()=>renderAdminSetup());
 </script>
-<!-- SCAN MODAL -->
-<div class="modal" id="scanModal">
-  <div class="modal-box" style="max-height:90vh">
-    <div class="modal-title">📷 Scan Barcode</div>
-    <p style="font-size:12px;color:var(--t2);margin-bottom:10px">Arahkan kamera ke barcode No. Pesanan atau Resi</p>
-    <div style="position:relative;width:100%;max-width:400px;margin:0 auto">
-      <video id="scanVideo" style="width:100%;border-radius:10px;background:#000" playsinline autoplay></video>
-      <canvas id="scanCanvas" style="display:none"></canvas>
-      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:80px;border:2px solid var(--blue);border-radius:6px;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,.3)"></div>
-    </div>
-    <div id="scanResult" style="margin-top:10px;font-size:13px;font-weight:600;color:var(--t2);text-align:center;min-height:20px"></div>
-    <!-- Input manual fallback -->
-    <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Atau ketik manual</div>
-      <div style="display:flex;gap:6px">
-        <input id="scanManualInput" class="inp" placeholder="Ketik no. orderan / resi di sini..." style="flex:1;font-size:14px" oninput="onScanManualInput()" onkeydown="if(event.key==='Enter')confirmManualScan()">
-        <button onclick="confirmManualScan()" style="padding:0 14px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">Pakai</button>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn-sm" style="flex:1;padding:11px" onclick="stopScan()">Batal</button>
-    </div>
-  </div>
-</div>
 
 <script>
 // ════════════════════════════════════════════════
@@ -2561,95 +2532,51 @@ var _scanInterval = null;
 var _scanDetected = '';
 var _scanStableCount = 0;
 
-function _isUnsafeContext(){
-  // Deteksi dibuka dari WebView (Telegram, WA, dll) atau file:// / content://
-  var proto = location.protocol;
-  if(proto === 'file:' || proto === 'content:') return 'file';
-  var ua = navigator.userAgent || '';
-  // Telegram WebView tandai dirinya dengan "TelegramAndroid" atau tidak punya chrome/
-  if(/telegram/i.test(ua)) return 'telegram';
-  // Heuristic: WebView Android biasanya tidak ada "Chrome/" tapi ada "wv"
-  if(/wv/.test(ua) || /; wv\)/.test(ua)) return 'webview';
-  return null;
-}
-
-function dismissChromeBanner(){
-  var b = document.getElementById('chromeHintBanner');
-  if(b) b.style.display = 'none';
-}
-function showOpenInChromeHint(){
-  var existing = document.getElementById('chromeHintBanner');
-  if(existing){ existing.style.display=''; return; }
-  var banner = document.createElement('div');
-  banner.id = 'chromeHintBanner';
-  banner.style.cssText = 'background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.6;color:#92400E';
-  banner.innerHTML = '<strong style="display:block;margin-bottom:4px">⚠️ Buka di Chrome agar scan bisa jalan</strong>'
-    + 'App ini dibuka dari Telegram/WhatsApp. Fitur scan kamera hanya bekerja di Chrome browser.<br>'
-    + '<span style="display:inline-block;margin-top:8px">'
-    + '<button onclick="dismissChromeBanner()" style="background:none;border:1px solid #92400E;border-radius:6px;padding:4px 12px;font-size:12px;color:#92400E;cursor:pointer;font-family:inherit;margin-right:8px">Tutup</button>'
-    + '<strong>Cara:</strong> tap ⋮ (menu) → <strong>Buka di browser</strong></span>';
-  var page = document.getElementById('page-input');
-  if(page) page.insertBefore(banner, page.firstChild);
-}
-
-function startScan(targetInputId){
-  _scanTargetId = targetInputId;
-  _scanDetected = '';
-  _scanStableCount = 0;
-
-  // Deteksi WebView / file context
-  var unsafeCtx = _isUnsafeContext();
-  if(unsafeCtx){
-    showOpenInChromeHint();
-    // Tetap fokuskan field agar bisa ketik manual
-    var field = document.getElementById(targetInputId);
-    if(field){ field.focus(); field.placeholder = 'Ketik manual di sini...'; }
-    showToast('⚠️ Buka di Chrome untuk pakai scan kamera');
-    return;
-  }
-
-  if(!('BarcodeDetector' in window)){
-    showToast('❗ Chrome perlu diupdate untuk support scan barcode.');
-    return;
-  }
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    showToast('❗ Kamera tidak tersedia. Pastikan pakai Chrome terbaru.');
-    return;
-  }
-
-  document.getElementById('scanResult').textContent = 'Membuka kamera...';
-  document.getElementById('scanModal').classList.add('open');
-
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: 'environment', width:{ideal:1280}, height:{ideal:720} }
-  })
-  .then(function(stream){
-    _scanStream = stream;
-    var video = document.getElementById('scanVideo');
-    video.srcObject = stream;
-    video.play();
-    document.getElementById('scanResult').textContent = 'Menunggu barcode...';
-    video.onloadedmetadata = function(){
-      _scanInterval = setInterval(scanFrame, 200);
-    };
-  })
-  .catch(function(err){
-    var msg = '❌ Kamera tidak bisa dibuka.';
-    if(err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'){
-      msg = '❌ Izin kamera ditolak. Di Chrome: tap ikon kunci/info di address bar → izinkan Kamera.';
-    } else if(err.name === 'NotFoundError'){
-      msg = '❌ Kamera tidak ditemukan di perangkat ini.';
-    } else if(err.name === 'NotReadableError'){
-      msg = '❌ Kamera sedang dipakai aplikasi lain. Tutup aplikasi kamera dulu.';
-    } else if(err.name === 'SecurityError'){
-      msg = '❌ Akses kamera diblokir. Pastikan dibuka dari Chrome, bukan dari Telegram/WA.';
+function handleScanPhoto(e, targetId){
+  var file = e.target.files[0];
+  if(!file) return;
+  e.target.value = '';
+  var img = new Image();
+  var url = URL.createObjectURL(file);
+  img.onload = function(){
+    var canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    if(!('BarcodeDetector' in window)){
+      showToast('Update Chrome ke versi terbaru untuk scan barcode');
+      return;
     }
-    document.getElementById('scanResult').innerHTML =
-      '<span style="font-size:12px;line-height:1.6">' + msg + '</span>';
-    showToast('❌ Kamera gagal dibuka');
-    // Jangan tutup modal - biarkan user baca pesan error
-  });
+    showToast('Membaca barcode dari foto...');
+    var bd = new BarcodeDetector({
+      formats: ['code_128','code_39','qr_code','ean_13','ean_8','itf','data_matrix','pdf417','aztec','codabar','upc_a','upc_e']
+    });
+    bd.detect(canvas).then(function(barcodes){
+      if(barcodes.length > 0){
+        var val = barcodes[0].rawValue;
+        var el = document.getElementById(targetId);
+        if(el){
+          el.value = val;
+          el.dispatchEvent(new Event('input'));
+          el.dispatchEvent(new Event('change'));
+        }
+        if(navigator.vibrate) navigator.vibrate([50,30,50]);
+        showToast('✅ Terscan: ' + val);
+        if(targetId === 'fResi') checkDupResi();
+        if(targetId === 'fOrder') onOrderInput();
+      } else {
+        showToast('❌ Barcode tidak terbaca. Foto lebih dekat & pastikan barcode terlihat jelas.');
+      }
+    }).catch(function(){
+      showToast('❌ Gagal membaca barcode dari foto.');
+    });
+  };
+  img.onerror = function(){ showToast('❌ Gagal membuka foto'); };
+  img.src = url;
 }
+
+
 function scanFrame(){
   var video = document.getElementById('scanVideo');
   var canvas = document.getElementById('scanCanvas');
@@ -2683,27 +2610,6 @@ function scanFrame(){
   }
 }
 
-function onScanManualInput(){
-  var val = document.getElementById('scanManualInput').value.trim();
-  // Auto-confirm kalau sudah cukup panjang dan user tekan enter (handled di onkeydown)
-}
-
-function confirmManualScan(){
-  var val = document.getElementById('scanManualInput').value.trim();
-  if(!val){ showToast('❗ Ketik dulu nomor yang mau dipakai'); return; }
-  _scanDetected = val;
-  var el = document.getElementById(_scanTargetId);
-  if(el){
-    el.value = val;
-    el.dispatchEvent(new Event('input'));
-    el.dispatchEvent(new Event('change'));
-  }
-  stopScan();
-  showToast('✅ Input manual: ' + val);
-  if(_scanTargetId === 'fResi') checkDupResi();
-  if(_scanTargetId === 'fOrder') onOrderInput();
-}
-
 function confirmScan(){
   if(!_scanDetected){
     showToast('❗ Belum ada barcode terdeteksi');
@@ -2724,18 +2630,6 @@ function confirmScan(){
   if(_scanTargetId === 'fOrder') onOrderInput();
 }
 
-function stopScan(){
-  if(_scanInterval){ clearInterval(_scanInterval); _scanInterval = null; }
-  if(_scanStream){
-    _scanStream.getTracks().forEach(function(t){ t.stop(); });
-    _scanStream = null;
-  }
-  document.getElementById('scanModal').classList.remove('open');
-  // Reset manual input
-  var mi = document.getElementById('scanManualInput');
-  if(mi) mi.value = '';
-  _scanDetected = '';
-}
 </script>
 
 </body>
