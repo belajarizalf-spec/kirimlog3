@@ -1410,8 +1410,10 @@ function openPreview(){
   const notes=document.getElementById('fNotes').value.trim();
   const resi=document.getElementById('fResi').value.trim();
 
-  if(!photoB64){showToast('❗ Foto Produk wajib');return;}
-  if(!photoB64_2){showToast('❗ Foto Paket/Resi wajib');return;}
+  var zone1EditMode = document.getElementById('photoZone').getAttribute('data-edit-mode')==='1';
+  var zone2EditMode = document.getElementById('photoZone2').getAttribute('data-edit-mode')==='1';
+  if(!photoB64 && !zone1EditMode){showToast('❗ Foto Produk wajib');return;}
+  if(!photoB64_2 && !zone2EditMode){showToast('❗ Foto Paket/Resi wajib');return;}
   if(!orderId){showToast('❗ No. Orderan wajib diisi');return;}
   if(!prods.length){showToast('❗ Minimal 1 produk');return;}
   // Cek duplikat resi
@@ -1623,10 +1625,17 @@ function resetForm(){
   document.getElementById('fNotes').value='';
   document.getElementById('photoPreview').src='';
   document.getElementById('photoZone').classList.remove('has-photo');
+  document.getElementById('photoZone').removeAttribute('data-edit-mode');
   document.getElementById('photoInput').value='';
   document.getElementById('photoPreview2').src='';
   document.getElementById('photoZone2').classList.remove('has-photo');
+  document.getElementById('photoZone2').removeAttribute('data-edit-mode');
   document.getElementById('photoInput2').value='';
+  // Reset placeholder teks
+  var pt1=document.getElementById('photoZone').querySelector('.pz-txt');
+  if(pt1) pt1.innerHTML='Foto <b>Produk</b>';
+  var pt2=document.getElementById('photoZone2').querySelector('.pz-txt');
+  if(pt2) pt2.innerHTML='Foto <b>Paket</b>';
   document.getElementById('btnOk').className='st-btn';
   document.getElementById('btnNo').className='st-btn';
   document.querySelectorAll('.ch-card').forEach(function(b){b.classList.remove('sel');});
@@ -1850,13 +1859,18 @@ async function openEdit(idx){
   document.getElementById('fResi').value=e.resi||'';
   document.getElementById('fNotes').value=e.notes||'';
 
-  // Set foto
+  // Set foto - kalau foto ada tampilkan, kalau tidak ada (dari Sheets) tampilkan placeholder "tersimpan"
   if(photoB64){
     document.getElementById('photoPreview').src=photoB64;
     document.getElementById('photoZone').classList.add('has-photo');
   } else {
+    // Foto tidak ada di cache, tapi entry sudah punya foto — tampilkan placeholder
     document.getElementById('photoPreview').src='';
     document.getElementById('photoZone').classList.remove('has-photo');
+    // Tandai sebagai "foto sudah ada" agar validasi tidak blokir
+    document.getElementById('photoZone').setAttribute('data-edit-mode','1');
+    var ph1=document.getElementById('photoZone').querySelector('.pz-txt');
+    if(ph1) ph1.innerHTML='<b style="color:var(--green)">✓ Foto tersimpan</b><br><small style="color:var(--t3)">Tap untuk ganti</small>';
   }
   if(photoB64_2){
     document.getElementById('photoPreview2').src=photoB64_2;
@@ -1864,6 +1878,17 @@ async function openEdit(idx){
   } else {
     document.getElementById('photoPreview2').src='';
     document.getElementById('photoZone2').classList.remove('has-photo');
+    document.getElementById('photoZone2').setAttribute('data-edit-mode','1');
+    var ph2=document.getElementById('photoZone2').querySelector('.pz-txt');
+    if(ph2) ph2.innerHTML='<b style="color:var(--green)">✓ Foto tersimpan</b><br><small style="color:var(--t3)">Tap untuk ganti</small>';
+  }
+  // Set sumber channel
+  curSumber=e.sumber||'';
+  if(curSumber){
+    document.querySelectorAll('.ch-card').forEach(function(b){b.classList.remove('sel');});
+    var chBtn=document.getElementById('ch-'+curSumber);
+    if(chBtn) chBtn.classList.add('sel');
+    document.getElementById('chReq').style.display='none';
   }
 
   // Set status
