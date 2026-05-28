@@ -927,6 +927,7 @@ function _onPullData(data){
       resi: r.resi||'',
       admin: r.admin||'',
       status: r.status||'lengkap',
+      sumber: r.sumber||r.channel||r.sumberOrder||'',
       date: String(r.tanggal||'').substring(0,10),
       dateDisplay: String(r.tanggal||''),
       time: String(r.jam||''),
@@ -1460,11 +1461,17 @@ function openPreview(){
   const d=getNow(), totalPcs=prods.reduce((s,p)=>s+p.qty,0);
   const resLabel=r=>r==='menyusul'?'📦 Menyusul':r==='refund'?'💰 Refund':'⏳ Belum';
 
+  const eRef=window._editEntryRef;
+  const previewPhoto1 = photoB64 || (eRef&&eRef.fotoUrl ? 'https://drive.google.com/thumbnail?id='+eRef.fotoUrl.replace(/.*\/d\//,'').replace(/\/.*/,'')+'&sz=w200' : '');
+  const previewPhoto2 = photoB64_2 || (eRef&&eRef.fotoUrl2 ? 'https://drive.google.com/thumbnail?id='+eRef.fotoUrl2.replace(/.*\/d\//,'').replace(/\/.*/,'')+'&sz=w200' : '');
+
   let html='';
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
-  html+='<img src="'+photoB64+'" style="width:100%;border-radius:10px;max-height:120px;object-fit:cover">';
-  html+='<img src="'+photoB64_2+'" style="width:100%;border-radius:10px;max-height:120px;object-fit:cover">';
-  html+='</div>';
+  if(previewPhoto1||previewPhoto2){
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+    html+=previewPhoto1?'<img src="'+previewPhoto1+'" style="width:100%;border-radius:10px;max-height:120px;object-fit:cover">':'<div style="width:100%;border-radius:10px;max-height:120px;min-height:80px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--t3)">Tersimpan di Drive</div>';
+    html+=previewPhoto2?'<img src="'+previewPhoto2+'" style="width:100%;border-radius:10px;max-height:120px;object-fit:cover">':'<div style="width:100%;border-radius:10px;max-height:120px;min-height:80px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--t3)">Tersimpan di Drive</div>';
+    html+='</div>';
+  }
   html+='<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--t3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);letter-spacing:.7px">Info Pesanan</div>';
   html+='<div class="dr"><span class="dr-l">No. Orderan</span><strong>'+orderId+'</strong></div>';
   if(resi) html+='<div class="dr"><span class="dr-l">Resi</span><strong>'+resi+'</strong></div>';
@@ -1522,27 +1529,40 @@ async function submitEntry(){
 
   const d=getNow();
 
-  // Mode edit: update entry yang sudah ada
+  // Mode edit dari Sheets (editingEntryId === '__sheets__') atau dari IndexedDB lokal
   if(editingEntryId){
-    const all=await dbGetAll('entries');
-    const existing=all.find(x=>x.id===editingEntryId);
-    if(!existing){ editingEntryId=null; btn.disabled=false; return; }
+    const eRef=window._editEntryRef; // referensi entry asli
 
+    // Buat objek updated berdasarkan data lama + perubahan baru
     const updated={
-      ...existing,
+      ...(eRef||{}),
       orderId:document.getElementById('fOrder').value.trim(),
       resi:document.getElementById('fResi').value.trim(),
       products:getProducts(),
       missingItems:curStatus==='kurang'?getMissingItems():[],
       notes:document.getElementById('fNotes').value.trim(),
       status:curStatus, sumber:curSumber, admin:currentAdmin,
-      photo:photoB64||existing.photo,
-      photo2:photoB64_2||existing.photo2,
+      photo:photoB64||(eRef&&eRef.photo)||'',
+      photo2:photoB64_2||(eRef&&eRef.photo2)||'',
+      fotoUrl:(eRef&&eRef.fotoUrl)||'',
+      fotoUrl2:(eRef&&eRef.fotoUrl2)||'',
+      date:(eRef&&eRef.date)||d.key,
+      dateDisplay:(eRef&&eRef.dateDisplay)||d.disp,
+      time:(eRef&&eRef.time)||d.time,
+      timestamp:(eRef&&eRef.timestamp)||d.iso,
       synced:false, _edited:true
     };
-    await dbPut('entries', updated);
 
-    // Sync update ke Sheets
+    // Jika mode edit IndexedDB lokal (bukan Sheets)
+    if(editingEntryId !== '__sheets__'){
+      try{
+        const all=await dbGetAll('entries');
+        const existing=all.find(x=>x.id===editingEntryId);
+        if(existing) await dbPut('entries',{...existing,...updated,id:existing.id});
+      }catch(err){ console.error('Local edit error:',err); }
+    }
+
+    // Sync update ke Sheets (selalu, baik dari local maupun Sheets)
     if(gasUrl){
       try{
         await fetch(gasUrl,{
@@ -1550,12 +1570,12 @@ async function submitEntry(){
           headers:{'Content-Type':'text/plain'},
           body:JSON.stringify({...updated, _action:'editEntry'})
         });
-        await dbPut('entries',{...updated,synced:true});
       }catch(err){ console.error('Edit sync error:',err); }
     }
 
-    // Reset tombol submit
+    // Reset state
     editingEntryId=null;
+    window._editEntryRef=null;
     const submitBtn=document.getElementById('submitBtn');
     submitBtn.innerHTML='Preview & Simpan <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     submitBtn.style.background='var(--blue)';
@@ -1563,6 +1583,7 @@ async function submitEntry(){
     closeModal('previewModal');
     btn.disabled=false; btn.textContent='Simpan Sekarang';
     showToast('✅ Pengiriman diupdate!');
+    setTimeout(function(){ pullFromSheets(true); }, 1500);
     resetForm(); renderHome(); updateKurangBadge();
     return;
   }
@@ -1612,6 +1633,9 @@ function closeConfirm(){ document.getElementById('confirmBg').classList.remove('
 
 function resetForm(){
   editingEntryId=null;
+  window._editEntryRef=null;
+  var cardTitle=document.querySelector('#page-input .card-title');
+  if(cardTitle) cardTitle.textContent='Input Pengiriman Baru';
   const submitBtn=document.getElementById('submitBtn');
   if(submitBtn){
     submitBtn.innerHTML='Preview & Simpan <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -1844,7 +1868,7 @@ async function openEdit(idx){
   // Cari dari _entryMap dulu, fallback ke _liveData
   const e=_entryMap[idx]||_liveData.find(function(x){return String(x.id)===String(idx);});
   if(!e) return;
-  editingEntryId=null; // tidak pakai IndexedDB ID
+  editingEntryId='__sheets__'; // tandai mode edit dari Sheets
   window._editEntryRef=e; // simpan referensi entry untuk submit
 
   // Pre-fill form dengan data existing
@@ -1860,9 +1884,17 @@ async function openEdit(idx){
   document.getElementById('fNotes').value=e.notes||'';
 
   // Set foto - kalau foto ada tampilkan, kalau tidak ada (dari Sheets) tampilkan placeholder "tersimpan"
+  var fotoUrl1 = e.fotoUrl||'';
+  var fotoUrl2 = e.fotoUrl2||'';
   if(photoB64){
     document.getElementById('photoPreview').src=photoB64;
     document.getElementById('photoZone').classList.add('has-photo');
+    document.getElementById('photoZone').setAttribute('data-edit-mode','1');
+  } else if(fotoUrl1){
+    // Foto ada di Drive, tampilkan thumbnail Google Drive
+    document.getElementById('photoPreview').src='https://drive.google.com/thumbnail?id='+fotoUrl1.replace(/.*\/d\//,'').replace(/\/.*/,'')+'&sz=w200';
+    document.getElementById('photoZone').classList.add('has-photo');
+    document.getElementById('photoZone').setAttribute('data-edit-mode','1');
   } else {
     // Foto tidak ada di cache, tapi entry sudah punya foto — tampilkan placeholder
     document.getElementById('photoPreview').src='';
@@ -1875,6 +1907,11 @@ async function openEdit(idx){
   if(photoB64_2){
     document.getElementById('photoPreview2').src=photoB64_2;
     document.getElementById('photoZone2').classList.add('has-photo');
+    document.getElementById('photoZone2').setAttribute('data-edit-mode','1');
+  } else if(fotoUrl2){
+    document.getElementById('photoPreview2').src='https://drive.google.com/thumbnail?id='+fotoUrl2.replace(/.*\/d\//,'').replace(/\/.*/,'')+'&sz=w200';
+    document.getElementById('photoZone2').classList.add('has-photo');
+    document.getElementById('photoZone2').setAttribute('data-edit-mode','1');
   } else {
     document.getElementById('photoPreview2').src='';
     document.getElementById('photoZone2').classList.remove('has-photo');
@@ -1912,6 +1949,9 @@ async function openEdit(idx){
     if((e.missingItems||[]).length===0) await addMissRow();
   }
 
+  // Ganti judul form jadi "Edit Pengiriman"
+  var cardTitle=document.querySelector('#page-input .card-title');
+  if(cardTitle) cardTitle.textContent='Edit Pengiriman';
   // Ganti tombol submit jadi "Update"
   const btn=document.getElementById('submitBtn');
   btn.innerHTML='Update Pengiriman <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
