@@ -10,7 +10,7 @@
 <title>KirimLog</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <style>
 :root{
   --blue:#2563EB;--blue-l:#EFF6FF;--blue-m:#DBEAFE;
@@ -379,8 +379,7 @@ select{appearance:none}
           <label class="lbl">No. Orderan <span class="req">*</span></label>
           <div style="display:flex;gap:6px">
             <input class="inp" id="fOrder" placeholder="Ketik atau tap foto untuk scan..." oninput="onOrderInput()" style="flex:1">
-            <button type="button" onclick="document.getElementById('scanInputOrder').click()" style="padding:0 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:20px;cursor:pointer;flex-shrink:0;min-width:48px;height:42px;display:flex;align-items:center;justify-content:center" title="Scan Barcode">📷</button>
-            <input type="file" id="scanInputOrder" accept="image/*" capture="environment" style="display:none" onchange="handleScanPhoto(event,'fOrder')">
+            <button type="button" onclick="openLiveScanner('fOrder')" style="padding:0 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:20px;cursor:pointer;flex-shrink:0;min-width:48px;height:42px;display:flex;align-items:center;justify-content:center" title="Scan Barcode">📷</button>
           </div>
           <div class="dup-warn" id="dupWarn">⚠ No. ini sudah diinput hari ini</div>
         </div>
@@ -388,8 +387,7 @@ select{appearance:none}
           <label class="lbl">Resi <span class="opt">(opsional)</span></label>
           <div style="display:flex;gap:6px">
             <input class="inp" id="fResi" placeholder="JX123..." oninput="checkDupResi()" onpaste="setTimeout(checkDupResi,100)" style="flex:1">
-            <button type="button" onclick="document.getElementById('scanInputResi').click()" style="padding:0 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:20px;cursor:pointer;flex-shrink:0;min-width:48px;height:42px;display:flex;align-items:center;justify-content:center" title="Scan Barcode">📷</button>
-            <input type="file" id="scanInputResi" accept="image/*" capture="environment" style="display:none" onchange="handleScanPhoto(event,'fResi')">
+            <button type="button" onclick="openLiveScanner('fResi')" style="padding:0 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:20px;cursor:pointer;flex-shrink:0;min-width:48px;height:42px;display:flex;align-items:center;justify-content:center" title="Scan Barcode">📷</button>
           </div>
           <div id="resiWarnDup" style="display:none;background:var(--amber-l);border:1px solid var(--amber-m);border-radius:8px;padding:8px 11px;font-size:11px;color:var(--amber);font-weight:600;margin-top:6px;line-height:1.4;gap:6px;align-items:flex-start"></div>
         </div>
@@ -2524,6 +2522,163 @@ init().then(()=>renderAdminSetup());
 </script>
 
 
+
+
+<!-- LIVE SCANNER MODAL -->
+<div class="modal-bg" id="liveScanModal" style="align-items:flex-end">
+  <div style="background:#000;width:100%;border-radius:20px 20px 0 0;padding:16px;max-height:92dvh;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="color:#fff;font-size:16px;font-weight:800">Scan Barcode</div>
+      <button onclick="closeLiveScanner()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">Tutup</button>
+    </div>
+    <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000">
+      <video id="lsVideo" style="width:100%;display:block;border-radius:12px" playsinline autoplay muted></video>
+      <canvas id="lsCanvas" style="display:none"></canvas>
+      <!-- Viewfinder overlay -->
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="width:72%;max-width:280px;height:90px;position:relative">
+          <!-- Corners -->
+          <div style="position:absolute;top:0;left:0;width:24px;height:24px;border-top:3px solid #3B82F6;border-left:3px solid #3B82F6;border-radius:3px 0 0 0"></div>
+          <div style="position:absolute;top:0;right:0;width:24px;height:24px;border-top:3px solid #3B82F6;border-right:3px solid #3B82F6;border-radius:0 3px 0 0"></div>
+          <div style="position:absolute;bottom:0;left:0;width:24px;height:24px;border-bottom:3px solid #3B82F6;border-left:3px solid #3B82F6;border-radius:0 0 0 3px"></div>
+          <div style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-bottom:3px solid #3B82F6;border-right:3px solid #3B82F6;border-radius:0 0 3px 0"></div>
+          <!-- Scan line -->
+          <div id="lsScanLine" style="position:absolute;left:0;right:0;height:2px;background:rgba(59,130,246,.8);box-shadow:0 0 6px #3B82F6;animation:scanline 1.8s ease-in-out infinite"></div>
+        </div>
+      </div>
+      <!-- Dark overlay outside viewfinder -->
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.5) 0%,transparent 25%,transparent 75%,rgba(0,0,0,.5) 100%);pointer-events:none"></div>
+    </div>
+    <!-- Status -->
+    <div id="lsStatus" style="color:#9CA3AF;font-size:13px;font-weight:600;text-align:center;margin:10px 0 6px">Arahkan barcode ke dalam kotak</div>
+    <!-- Manual input fallback -->
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <input id="lsManual" class="inp" placeholder="Atau ketik manual di sini..." style="flex:1;background:#1F2937;border-color:#374151;color:#fff;font-size:14px" onkeydown="if(event.key==='Enter')confirmLsManual()">
+      <button onclick="confirmLsManual()" style="padding:0 14px;background:#2563EB;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">Pakai</button>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes scanline {
+  0%{top:10%} 50%{top:80%} 100%{top:10%}
+}
+</style>
+
+<script>
+// ════════════════════════════════════════════════
+// LIVE BARCODE SCANNER
+// ════════════════════════════════════════════════
+var _lsTarget = '';
+var _lsStream = null;
+var _lsInterval = null;
+var _lsLastResult = '';
+var _lsConfirmTimeout = null;
+
+function openLiveScanner(targetId){
+  _lsTarget = targetId;
+  _lsLastResult = '';
+  document.getElementById('lsManual').value = '';
+  document.getElementById('lsStatus').style.color = '#9CA3AF';
+  document.getElementById('lsStatus').textContent = 'Arahkan barcode ke dalam kotak';
+  document.getElementById('liveScanModal').classList.add('open');
+
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: {ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} }
+  })
+  .then(function(stream){
+    _lsStream = stream;
+    var vid = document.getElementById('lsVideo');
+    vid.srcObject = stream;
+    vid.play();
+    vid.onloadedmetadata = function(){
+      _lsInterval = setInterval(_lsTick, 150);
+    };
+  })
+  .catch(function(err){
+    var msg = 'Kamera tidak bisa dibuka.';
+    if(err.name==='NotAllowedError') msg = 'Izin kamera ditolak. Tap ikon kunci di address bar → izinkan Kamera.';
+    else if(err.name==='NotFoundError') msg = 'Kamera tidak ditemukan.';
+    document.getElementById('lsStatus').style.color = '#EF4444';
+    document.getElementById('lsStatus').textContent = '❌ ' + msg;
+  });
+}
+
+function _lsTick(){
+  var vid = document.getElementById('lsVideo');
+  var canvas = document.getElementById('lsCanvas');
+  if(!vid || vid.readyState < 2 || !vid.videoWidth) return;
+
+  canvas.width = vid.videoWidth;
+  canvas.height = vid.videoHeight;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(vid, 0, 0);
+  var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  // Pakai jsQR
+  if(typeof jsQR !== 'undefined'){
+    var code = jsQR(imageData.data, imageData.width, imageData.height, {inversionAttempts:'dontInvert'});
+    if(code && code.data){
+      _lsGotResult(code.data);
+      return;
+    }
+  }
+
+  // Fallback BarcodeDetector
+  if('BarcodeDetector' in window){
+    var bd = new BarcodeDetector({formats:['code_128','code_39','qr_code','ean_13','ean_8','itf','data_matrix','pdf417','aztec','codabar','upc_a','upc_e']});
+    bd.detect(canvas).then(function(barcodes){
+      if(barcodes.length > 0) _lsGotResult(barcodes[0].rawValue);
+    }).catch(function(){});
+  }
+}
+
+function _lsGotResult(val){
+  if(!val || val === _lsLastResult) return;
+  _lsLastResult = val;
+
+  // Update status
+  var st = document.getElementById('lsStatus');
+  st.style.color = '#22C55E';
+  st.textContent = '✅ Terbaca: ' + val;
+
+  if(navigator.vibrate) navigator.vibrate([60,30,60]);
+
+  // Auto confirm setelah 600ms
+  clearTimeout(_lsConfirmTimeout);
+  _lsConfirmTimeout = setTimeout(function(){
+    _lsApply(val);
+  }, 600);
+}
+
+function _lsApply(val){
+  var el = document.getElementById(_lsTarget);
+  if(el){
+    el.value = val;
+    el.dispatchEvent(new Event('input'));
+    el.dispatchEvent(new Event('change'));
+  }
+  closeLiveScanner();
+  showToast('✅ Terscan: ' + val);
+  if(_lsTarget === 'fResi') checkDupResi();
+  if(_lsTarget === 'fOrder') onOrderInput();
+}
+
+function confirmLsManual(){
+  var val = document.getElementById('lsManual').value.trim();
+  if(!val){ showToast('❗ Ketik dulu nomornya'); return; }
+  _lsApply(val);
+}
+
+function closeLiveScanner(){
+  clearTimeout(_lsConfirmTimeout);
+  if(_lsInterval){ clearInterval(_lsInterval); _lsInterval = null; }
+  if(_lsStream){ _lsStream.getTracks().forEach(function(t){t.stop()}); _lsStream = null; }
+  document.getElementById('liveScanModal').classList.remove('open');
+  document.getElementById('lsManual').value = '';
+  _lsLastResult = '';
+}
+</script>
 
 </body>
 </html>
