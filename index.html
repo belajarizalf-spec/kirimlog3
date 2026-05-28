@@ -2537,9 +2537,16 @@ init().then(()=>{
       <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:80px;border:2px solid var(--blue);border-radius:6px;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,.3)"></div>
     </div>
     <div id="scanResult" style="margin-top:10px;font-size:13px;font-weight:600;color:var(--t2);text-align:center;min-height:20px"></div>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn-primary" style="flex:1" onclick="confirmScan()">✓ Pakai Hasil Ini</button>
-      <button class="btn-sm" style="flex:1" onclick="stopScan()">Batal</button>
+    <!-- Input manual fallback -->
+    <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Atau ketik manual</div>
+      <div style="display:flex;gap:6px">
+        <input id="scanManualInput" class="inp" placeholder="Ketik no. orderan / resi di sini..." style="flex:1;font-size:14px" oninput="onScanManualInput()" onkeydown="if(event.key==='Enter')confirmManualScan()">
+        <button onclick="confirmManualScan()" style="padding:0 14px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">Pakai</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-sm" style="flex:1;padding:11px" onclick="stopScan()">Batal</button>
     </div>
   </div>
 </div>
@@ -2676,6 +2683,27 @@ function scanFrame(){
   }
 }
 
+function onScanManualInput(){
+  var val = document.getElementById('scanManualInput').value.trim();
+  // Auto-confirm kalau sudah cukup panjang dan user tekan enter (handled di onkeydown)
+}
+
+function confirmManualScan(){
+  var val = document.getElementById('scanManualInput').value.trim();
+  if(!val){ showToast('❗ Ketik dulu nomor yang mau dipakai'); return; }
+  _scanDetected = val;
+  var el = document.getElementById(_scanTargetId);
+  if(el){
+    el.value = val;
+    el.dispatchEvent(new Event('input'));
+    el.dispatchEvent(new Event('change'));
+  }
+  stopScan();
+  showToast('✅ Input manual: ' + val);
+  if(_scanTargetId === 'fResi') checkDupResi();
+  if(_scanTargetId === 'fOrder') onOrderInput();
+}
+
 function confirmScan(){
   if(!_scanDetected){
     showToast('❗ Belum ada barcode terdeteksi');
@@ -2703,6 +2731,9 @@ function stopScan(){
     _scanStream = null;
   }
   document.getElementById('scanModal').classList.remove('open');
+  // Reset manual input
+  var mi = document.getElementById('scanManualInput');
+  if(mi) mi.value = '';
   _scanDetected = '';
 }
 </script>
