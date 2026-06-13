@@ -142,7 +142,7 @@ textarea.inp{line-height:1.55}
 .item-badge.red{color:var(--red)}
 .item-grid{display:grid;gap:6px;align-items:flex-start}
 .item-grid.prod-g{grid-template-columns:1fr 72px 44px}
-.item-grid.prod-g .picker-wrap{min-width:0;overflow:hidden}
+.item-grid.prod-g .picker-wrap{min-width:0}
 .item-grid.miss-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(82px,92px) 54px;gap:10px;align-items:center}
 .item-grid.miss-g .picker-wrap{grid-column:1/-1;width:100%;max-width:100%;display:block;min-width:0}
 .item-grid.miss-g .picker-trigger{width:100%;min-height:54px;border-radius:18px;padding:14px 42px 14px 16px;font-size:15px;background:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1118,15 +1118,15 @@ function _onPullData(data){
     return {
       id: r.id||i,
       orderId: r.noOrderan||'',
-      resi: r.resi||'',
-      admin: r.admin||'',
+      resi: (function(v){var s=String(v||'').trim();return(s==='-'||s==='–')?'':s;})(r.resi),
+      admin: (function(v){var s=String(v||'').trim();return(s==='-'||s==='–')?'':s;})(r.admin),
       status: r.status||'lengkap',
-      sumber: r.sumber||r.channel||r.sumberOrder||'',
+      sumber: (function(v){var s=String(v||'').trim();return(s==='-'||s==='–')?'':s;})(r.sumber||r.channel||r.sumberOrder),
       date: String(r.tanggal||'').substring(0,10),
       dateDisplay: String(r.tanggal||''),
       time: String(r.jam||''),
       timestamp: String(r.timestamp||r.iso||''),
-      notes: String(r.catatan||''),
+      notes: (function(v){var s=String(v||'').trim(); return (s==='-'||s==='–'||s==='')?'':s;})(r.catatan),
       photo: '',
       photo2: '',
       fotoUrl: String(r.fotoUrl||''),
@@ -1518,7 +1518,10 @@ function go(tab){
 }
 
 function closeAllPickers(){
-  document.querySelectorAll('.picker-dropdown').forEach(d=>d.remove());
+  document.querySelectorAll('.picker-dropdown').forEach(function(d){
+    if(d._ownerBtn) d._ownerBtn._dropdownOpen=false;
+    d.remove();
+  });
   openPickerRow=null;
 }
 
@@ -1559,16 +1562,46 @@ async function createPickerTrigger(rowEl, fieldName, currentValue){
   btn.onclick=async function(e){
     e.stopPropagation();
     // Close other pickers
-    document.querySelectorAll('.picker-dropdown').forEach(d=>{if(d!==wrap.querySelector('.picker-dropdown')) d.remove();});
+    document.querySelectorAll('.picker-dropdown').forEach(d=>d.remove());
 
-    const existing=wrap.querySelector('.picker-dropdown');
-    if(existing){existing.remove();openPickerRow=null;return;}
+    // Toggle: if dropdown for this btn already open, close it
+    if(btn._dropdownOpen){btn._dropdownOpen=false;return;}
 
     openPickerRow=rowEl;
     const dropdown=await buildPickerDropdown(btn, wrap);
-    wrap.appendChild(dropdown);
+
+    // Position dropdown relative to button using fixed coords
+    const rect=btn.getBoundingClientRect();
+    const spaceBelow=window.innerHeight-rect.bottom;
+    const spaceAbove=rect.top;
+    const dropH=Math.min(280, Math.max(spaceBelow,spaceAbove)-12);
+
+    dropdown.style.position='fixed';
+    dropdown.style.left=rect.left+'px';
+    dropdown.style.width=rect.width+'px';
+    dropdown.style.zIndex='9000';
+    dropdown.style.maxHeight=dropH+'px';
+
+    if(spaceBelow>=180 || spaceBelow>=spaceAbove){
+      dropdown.style.top=(rect.bottom+4)+'px';
+      dropdown.style.bottom='';
+    } else {
+      dropdown.style.bottom=(window.innerHeight-rect.top+4)+'px';
+      dropdown.style.top='';
+    }
+
+    document.body.appendChild(dropdown);
+    btn._dropdownOpen=true;
+    dropdown._ownerBtn=btn;
+
     const si=dropdown.querySelector('.picker-search');
     if(si) setTimeout(()=>si.focus(),50);
+
+    // Mark closed when removed
+    const obs=new MutationObserver(function(){
+      if(!document.body.contains(dropdown)){btn._dropdownOpen=false;obs.disconnect();}
+    });
+    obs.observe(document.body,{childList:true,subtree:false});
   };
 
   wrap.appendChild(btn);
@@ -1670,7 +1703,7 @@ function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(
 
 // Close picker on outside click
 document.addEventListener('click',function(e){
-  if(!e.target.closest('.picker-wrap')) closeAllPickers();
+  if(!e.target.closest('.picker-wrap') && !e.target.closest('.picker-dropdown')) closeAllPickers();
 });
 
 // ════════════════════════════════════════════════
