@@ -122,7 +122,7 @@ textarea.inp{line-height:1.55}
 .picker-trigger{width:100%;min-width:0;background:var(--w);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-size:13px;padding:11px 30px 11px 11px;min-height:46px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:border-color .15s;display:block;box-sizing:border-box}
 .picker-trigger.empty{color:var(--t3)}
 .picker-trigger::after{content:"▾";position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--t3);pointer-events:none}
-.picker-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--w);border:none;border-radius:18px;z-index:300;box-shadow:0 18px 40px rgba(22,24,29,.18);overflow:hidden}
+.picker-dropdown{position:fixed;background:var(--w);border:none;border-radius:18px;z-index:9000;box-shadow:0 18px 40px rgba(22,24,29,.18);overflow:hidden}
 .picker-search-wrap{padding:10px;background:var(--surface-2);border-bottom:1px solid var(--border)}
 .picker-search{width:100%;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:13px;outline:none;font-family:inherit}
 .picker-list{max-height:220px;overflow-y:auto}
@@ -1581,6 +1581,7 @@ async function createPickerTrigger(rowEl, fieldName, currentValue){
     dropdown.style.width=rect.width+'px';
     dropdown.style.zIndex='9000';
     dropdown.style.maxHeight=dropH+'px';
+    dropdown.style.overflowY='auto';
 
     if(spaceBelow>=180 || spaceBelow>=spaceAbove){
       dropdown.style.top=(rect.bottom+4)+'px';
