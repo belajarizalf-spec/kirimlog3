@@ -1562,7 +1562,10 @@ async function createPickerTrigger(rowEl, fieldName, currentValue){
   btn.onclick=async function(e){
     e.stopPropagation();
     // Close other pickers
-    document.querySelectorAll('.picker-dropdown').forEach(d=>d.remove());
+    document.querySelectorAll('.picker-dropdown').forEach(function(d){
+      if(d._ownerBtn) d._ownerBtn._dropdownOpen=false;
+      d.remove();
+    });
 
     // Toggle: if dropdown for this btn already open, close it
     if(btn._dropdownOpen){btn._dropdownOpen=false;return;}
@@ -1570,8 +1573,12 @@ async function createPickerTrigger(rowEl, fieldName, currentValue){
     openPickerRow=rowEl;
     const dropdown=await buildPickerDropdown(btn, wrap);
 
+    // Tunggu layout selesai sebelum hitung posisi
+    await new Promise(r=>requestAnimationFrame(r));
+
     // Position dropdown relative to button using fixed coords
     const rect=btn.getBoundingClientRect();
+    if(!rect.width){dropdown.remove();return;}
     const spaceBelow=window.innerHeight-rect.bottom;
     const spaceAbove=rect.top;
     const dropH=Math.min(280, Math.max(spaceBelow,spaceAbove)-12);
@@ -1712,14 +1719,15 @@ document.addEventListener('click',function(e){
 // ════════════════════════════════════════════════
 async function addProdRow(){
   prodRowCount++;
-  const idx=prodRowCount;
   const row=document.createElement('div');
   row.className='item-row';
-  row.dataset.idx=idx;
 
   const badge=document.createElement('span');
   badge.className='item-badge';
-  badge.textContent='Barang '+idx;
+  // Nomor berdasarkan posisi aktual di DOM, bukan counter global
+  const currentCount=document.querySelectorAll('#prodList .item-row').length+1;
+  badge.textContent='Barang '+currentCount;
+  row.dataset.idx=prodRowCount;
   row.appendChild(badge);
 
   const grid=document.createElement('div');
@@ -1758,15 +1766,15 @@ async function addProdRow(){
 
 async function addMissRow(){
   missRowCount++;
-  const idx=missRowCount;
   const row=document.createElement('div');
   row.className='item-row kurang-row';
-  row.dataset.idx=idx;
+  row.dataset.idx=missRowCount;
   row.dataset.resolusi='pending';
 
   const badge=document.createElement('span');
   badge.className='item-badge red';
-  badge.textContent='Barang Kurang '+idx;
+  const currentMissCount=document.querySelectorAll('#missList .item-row').length+1;
+  badge.textContent='Barang Kurang '+currentMissCount;
   row.appendChild(badge);
 
   const grid=document.createElement('div');
