@@ -955,6 +955,10 @@ function getNow(){
 // ════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════
+// ══ HARDCODE GAS URL DI SINI agar tidak perlu setup ulang ══
+// Ganti nilai di bawah dengan URL deployment GAS kamu
+const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwTidFwhPu2jW1DNKlWizU7qz6pTFZe7ae5TbfejjXgKu8yhRD2SstuvaFcN8hOUcjl/exec';
+
 async function init(){
   try {
     await initDB();
@@ -962,11 +966,16 @@ async function init(){
     console.error('IndexedDB error:', dbErr);
     showToast('⚠ DB error - mode terbatas');
   }
-  // Jika dibuka dari GAS, URL otomatis tersedia
-  // Netlify: baca URL dari localStorage (primary) atau IndexedDB
+  // Prioritas: localStorage → IndexedDB → hardcoded default
   gasUrl = localStorage.getItem('gasUrl') || '';
   if(!gasUrl){
     try { gasUrl=await cfgGet('gasUrl')||''; } catch(e){}
+  }
+  // Fallback ke hardcoded URL jika semua kosong
+  if(!gasUrl && GAS_URL_DEFAULT){
+    gasUrl = GAS_URL_DEFAULT;
+    localStorage.setItem('gasUrl', gasUrl);
+    try { await cfgSet('gasUrl', gasUrl); } catch(e){}
   }
   console.log('KirimLog init, gasUrl:', gasUrl ? gasUrl.substring(0,50)+'...' : 'KOSONG');
   try { currentAdmin=await cfgGet('currentAdmin')||''; } catch(e){ currentAdmin=localStorage.getItem('currentAdmin')||''; }
@@ -3336,6 +3345,7 @@ async function saveGasUrl(){
   setTimeout(function(){
     pullFromSheets();
     pullProdukFromSheets();
+    if(_allKurangData===null) fetchAllKurang();
   }, 500);
 }
 async function testConn(){
@@ -3356,7 +3366,12 @@ async function testConn(){
   showToast('✅ URL disimpan');
 }
 function copyGasCode(){navigator.clipboard.writeText(GAS_CODE).then(()=>showToast('✅ Kode tersalin!')).catch(()=>showToast('Gagal copy'));}
-function updateConnDot(){document.getElementById('connDot').classList.toggle('ok',!!gasUrl);}
+function updateConnDot(){
+  var dot=document.getElementById('connDot');
+  var lbl=document.getElementById('syncLabel');
+  dot.classList.toggle('ok',!!gasUrl);
+  if(!gasUrl && lbl) lbl.textContent='Belum terhubung ke Google Sheets';
+}
 
 // ════════════════════════════════════════════════
 // ADMIN
