@@ -664,10 +664,14 @@ textarea.inp{line-height:1.55}
   </div>
 
   <div class="page" id="page-kurang">
-    <div class="info-banner" style="background:var(--red-l);border:1px solid var(--red-m)">
-      <span style="font-size:16px">⚠️</span>
-      <span style="font-size:13px;font-weight:600;color:var(--red);line-height:1.5">Pesanan Tidak Lengkap — tap Update Resolusi untuk ubah status</span>
+    <div class="info-banner" style="background:var(--red-l);border:1px solid var(--red-m);display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">⚠️</span>
+        <span style="font-size:13px;font-weight:600;color:var(--red);line-height:1.5">Pesanan Tidak Lengkap</span>
+      </div>
+      <button onclick="fetchAllKurang()" id="btnRefreshKurang" style="flex-shrink:0;background:var(--red);color:#fff;border:none;border-radius:10px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">↻ Muat Semua</button>
     </div>
+    <div id="kurangSyncInfo" style="font-size:11px;color:var(--t3);text-align:center;margin:-2px 0 8px;display:none"></div>
     <div style="display:flex;gap:7px;margin-bottom:12px">
       <input class="inp" id="kurangSearch" placeholder="Cari no. order / produk..." oninput="renderKurang()" style="flex:1;font-size:13px;padding:10px 12px">
       <select class="filter-select" id="kurangFilter" onchange="renderKurang()" style="min-width:110px;padding:10px 28px 10px 11px;font-size:12px">
@@ -917,6 +921,7 @@ let _entryMap = {}; // map index → entry object (untuk edit/hapus yang aman)
 let _entryIndex = 0;
 let _kurangMap = {}; // map index → kurang entry (untuk Update Resolusi)
 let _kurangIndex = 0;
+let _allKurangData = null; // semua history kurang dari sheet Kurang (null = belum di-fetch)
 let _liveLoading = false;
 
 // ════════════════════════════════════════════════
@@ -1486,7 +1491,7 @@ function go(tab){
   if(ni) ni.classList.add('active');
   if(tab==='home') renderHome();
   if(tab==='riwayat') renderRiwayat();
-  if(tab==='kurang') renderKurang();
+  if(tab==='kurang'){ renderKurang(); if(gasUrl && _allKurangData===null) fetchAllKurang(); }
   if(tab==='produk') renderProduk();
   closeAllPickers();
 }
@@ -2652,11 +2657,59 @@ async function addMissRowWithValue(m){
 // ════════════════════════════════════════════════
 // KURANG
 // ════════════════════════════════════════════════
+async function fetchAllKurang(){
+  if(!gasUrl){ showToast('❗ GAS URL belum diset'); return; }
+  var btn=document.getElementById('btnRefreshKurang');
+  var info=document.getElementById('kurangSyncInfo');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Memuat...'; }
+  if(info){ info.style.display='block'; info.textContent='Mengambil semua data kurang dari Sheets...'; }
+  var cbName='_cb_kurang_'+Date.now();
+  var s=document.createElement('script');
+  s.src=gasUrl+'?action=getKurang&callback='+cbName+'&t='+Date.now();
+  window[cbName]=function(data){
+    delete window[cbName]; s.remove();
+    if(btn){ btn.disabled=false; btn.textContent='↻ Muat Semua'; }
+    if(data&&data.ok&&data.rows){
+      _allKurangData=data.rows.map(function(r){
+        return {
+          orderId: r.noOrderan||r.orderId||'',
+          date: r.tanggal||r.date||'',
+          time: r.jam||r.time||'',
+          admin: r.admin||'-',
+          status: 'kurang',
+          products: r.produk ? [{name:r.produk,qty:1}] : [],
+          missingItems: parseMissStr(String(r.barangKurang||''), String(r.resolusi||'')),
+          notes: r.catatan||''
+        };
+      });
+      if(info){ info.style.display='block'; info.textContent='✓ Menampilkan semua '+_allKurangData.length+' history kurang dari Sheets'; }
+      renderKurang();
+    } else {
+      if(info){ info.style.display='block'; info.textContent='⚠ Gagal muat — tampil data lokal'; }
+      showToast('⚠ Gagal ambil data kurang');
+    }
+  };
+  s.onerror=function(){
+    delete window[cbName]; s.remove();
+    if(btn){ btn.disabled=false; btn.textContent='↻ Muat Semua'; }
+    if(info){ info.style.display='block'; info.textContent='⚠ Gagal muat — tampil data lokal'; }
+    showToast('⚠ Koneksi gagal');
+  };
+  document.head.appendChild(s);
+}
+
 async function renderKurang(){
-  const all=_liveData;
-  const kurang=all.filter(function(e){return e.status==='kurang';});
+  // Pakai _allKurangData kalau sudah di-fetch, fallback ke _liveData
+  var sourceData;
+  if(_allKurangData !== null){
+    sourceData = _allKurangData;
+  } else {
+    sourceData = _liveData.filter(function(e){return e.status==='kurang';});
+  }
+  const all=sourceData;
+  const kurang=all;
   const el=document.getElementById('kurangList');
-  if(!kurang.length){el.innerHTML='<div class="empty"><div class="empty-svg"><svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" rx="20" fill="#EEFDF4"/><circle cx="40" cy="38" r="18" fill="#D8F8E5" stroke="#128A43" stroke-width="2"/><path d="M31 38L37 44L50 31" stroke="#128A43" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 62C28 62 40 56 52 62" stroke="#128A43" stroke-width="2" stroke-linecap="round"/></svg></div><div class="empty-title">Semua lengkap!</div><div class="empty-txt">Tidak ada barang kurang saat ini.<br>Kerja bagus! &#127881;</div></div>';return;}
+  if(!kurang || !kurang.length){el.innerHTML='<div class="empty"><div class="empty-svg"><svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" rx="20" fill="#EEFDF4"/><circle cx="40" cy="38" r="18" fill="#D8F8E5" stroke="#128A43" stroke-width="2"/><path d="M31 38L37 44L50 31" stroke="#128A43" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 62C28 62 40 56 52 62" stroke="#128A43" stroke-width="2" stroke-linecap="round"/></svg></div><div class="empty-title">Semua lengkap!</div><div class="empty-txt">Tidak ada barang kurang saat ini.<br>Kerja bagus! &#127881;</div></div>';return;}
 
   const resLabel=function(r){return r==='menyusul'?'Menyusul':r==='refund'?'Refund':'Belum';};
   const resType=function(r){return r==='menyusul'?'p-menyusul':r==='refund'?'p-refund':'p-pending';};
