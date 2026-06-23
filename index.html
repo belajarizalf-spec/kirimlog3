@@ -1730,6 +1730,8 @@ function openPreview(){
 async function submitEntry(){
   const btn=document.getElementById('confirmBtn');
   btn.disabled=true; btn.textContent='Menyimpan...';
+  // Snapshot foto sekarang sebelum ada kemungkinan ter-clear
+  var _photoSnapshot1=photoB64||'', _photoSnapshot2=photoB64_2||'';
 
   // Cek duplikat resi sebelum submit — skip entry yang sedang diedit
   const resi = document.getElementById('fResi').value.trim();
@@ -1823,29 +1825,14 @@ async function submitEntry(){
     status:curStatus, sumber:curSumber, admin:currentAdmin, photo:'', photo2:'',
     date:d.key, dateDisplay:d.disp, time:d.time, timestamp:d.iso, synced:false
   };
-  await dbAdd('entries',entry);
-  // Push ke GAS dengan foto, tapi simpan lokal tanpa foto
-  const _pushEntry=Object.assign({},entry,{photo:photoB64,photo2:photoB64_2});
 
-  let synced=false;
-  if(gasUrl){
-    synced=await pushToSheets(_pushEntry);
-    if(synced){
-      // Berhasil sync → hapus dari IndexedDB (sudah aman di Sheets)
-      // Ini mencegah auto-push ulang yang bikin duplikat
-      try{
-        const all=await dbGetAll('entries');
-        const saved=all.find(x=>x.orderId===entry.orderId&&x.timestamp===entry.timestamp);
-        if(saved&&saved.id) await dbDel('entries',saved.id);
-      }catch(e){}
-    }
-  }
+  // ── OPTIMISTIC SAVE: simpan lokal dulu, UI langsung tutup ──
+  // Sync ke GAS jalan di background, user tidak perlu nunggu
+  await dbAdd('entries', entry);
 
+  // Langsung tutup modal & kasih konfirmasi — TANPA nunggu GAS
   closeModal('previewModal');
   btn.disabled=false; btn.textContent='Simpan Sekarang';
-
-  // Tarik ulang data dari Sheets agar semua HP sync
-  setTimeout(function(){ pullFromSheets(true); }, 2000);
 
   const isK=curStatus==='kurang';
   const tp=entry.products.reduce((s,p)=>s+p.qty,0);
@@ -1855,10 +1842,35 @@ async function submitEntry(){
   let body='<strong>#'+entry.orderId+'</strong><br>'+entry.products.map(p=>p.name+' · '+p.qty+'pcs').join('<br>');
   body+='<br><span style="font-size:11px;color:var(--t3)">Total: '+tp+' pcs</span>';
   if(isK) body+='<br><br><span style="color:var(--red);font-weight:600">'+entry.missingItems.map(m=>m.name+' ('+m.qtyMissing+' kur)').join(', ')+'</span>';
-  body+='<br><span style="font-size:11px;color:var(--t3);display:block;margin-top:6px">'+(synced?'☁ Tersync ke Google Sheets':gasUrl?'⚠ Gagal sync — tersimpan lokal':'💾 Tersimpan lokal')+'</span>';
+  body+='<br><span id="syncStatusLine" style="font-size:11px;color:var(--t3);display:block;margin-top:6px">⏳ Menyinkron ke Sheets...</span>';
   document.getElementById('confirmBody').innerHTML=body;
   document.getElementById('confirmBg').classList.add('open');
-  updateKurangBadge();
+  photoB64=''; photoB64_2='';
+  resetForm(); renderHome(); updateKurangBadge();
+
+  // ── BACKGROUND SYNC ke GAS (tidak blokir UI) ──
+  if(gasUrl){
+    // Pakai foto yang sudah di-snapshot sebelum reset
+    const _pushFinal=Object.assign({},entry,{photo:_photoSnapshot1,photo2:_photoSnapshot2});
+    setTimeout(function(){
+      pushToSheets(_pushFinal).then(function(synced){
+        if(synced){
+          // Hapus dari IDB setelah berhasil sync
+          dbGetAll('entries').then(function(all){
+            var s=all.find(function(x){return x.orderId===entry.orderId&&x.timestamp===entry.timestamp;});
+            if(s&&s.id) dbDel('entries',s.id);
+          });
+          // Update status line kalau confirm masih terbuka
+          var sl=document.getElementById('syncStatusLine');
+          if(sl) sl.textContent='☁ Tersync ke Google Sheets ✓';
+        } else {
+          var sl=document.getElementById('syncStatusLine');
+          if(sl) sl.textContent='⚠ Tersimpan lokal — akan sync otomatis';
+        }
+        setTimeout(function(){ pullFromSheets(true); }, 1000);
+      });
+    }, 100); // delay 100ms biar UI selesai render dulu
+  }
 }
 
 function closeConfirm(){ document.getElementById('confirmBg').classList.remove('open'); }
