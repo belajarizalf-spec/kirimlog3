@@ -1780,39 +1780,42 @@ async function submitEntry(){
       synced:false, _edited:true
     };
 
-    // Jika mode edit IndexedDB lokal (bukan Sheets)
-    if(editingEntryId !== '__sheets__'){
-      try{
-        const all=await dbGetAll('entries');
-        const existing=all.find(x=>x.id===editingEntryId);
-        if(existing) await dbPut('entries',{...existing,...updated,id:existing.id});
-      }catch(err){ console.error('Local edit error:',err); }
-    }
-
-    // Sync update ke Sheets (selalu, baik dari local maupun Sheets)
-    if(gasUrl){
-      try{
-        await fetch(gasUrl,{
-          method:'POST', mode:'no-cors',
-          headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({...updated, _action:'editEntry'})
-        });
-      }catch(err){ console.error('Edit sync error:',err); }
-    }
-
-    // Reset state
+    // ── TUTUP UI DULU — semua proses lokal & Sheets di background ──
+    var editingEntryId_snapshot = editingEntryId; // simpan sebelum di-clear
     editingEntryId=null;
     window._editEntryRef=null;
     const submitBtn=document.getElementById('submitBtn');
     submitBtn.innerHTML='Preview & Simpan <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     submitBtn.style.background='var(--blue)';
-
     closeModal('previewModal');
     btn.disabled=false; btn.textContent='Simpan Sekarang';
-    showToast('✅ Pengiriman diupdate!');
-    setTimeout(function(){ pullFromSheets(true); }, 1500);
-    photoB64='';photoB64_2='';
-  resetForm(); renderHome(); updateKurangBadge();
+    showToast('✅ Diupdate! Menyinkron...');
+    photoB64=''; photoB64_2='';
+    resetForm(); renderHome(); updateKurangBadge();
+
+    // Background: update IDB lokal + sync ke Sheets
+    const _editId = editingEntryId_snapshot;
+    const _updated = updated;
+    setTimeout(function(){
+      // Update IDB lokal kalau bukan dari Sheets
+      if(_editId && _editId !== '__sheets__'){
+        dbGetAll('entries').then(function(all){
+          var ex=all.find(function(x){return x.id===_editId;});
+          if(ex) dbPut('entries',Object.assign({},ex,_updated,{id:ex.id})).catch(function(){});
+        }).catch(function(){});
+      }
+      // Sync ke Sheets
+      if(gasUrl){
+        fetch(gasUrl,{
+          method:'POST', mode:'no-cors',
+          headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify(Object.assign({},_updated,{_action:'editEntry'}))
+        }).then(function(){
+          showToast('☁ Edit tersync!');
+          setTimeout(function(){ pullFromSheets(true); },500);
+        }).catch(function(){ showToast('⚠ Gagal sync edit'); });
+      }
+    }, 50);
     return;
   }
 
@@ -1826,11 +1829,7 @@ async function submitEntry(){
     date:d.key, dateDisplay:d.disp, time:d.time, timestamp:d.iso, synced:false
   };
 
-  // ── OPTIMISTIC SAVE: simpan lokal dulu, UI langsung tutup ──
-  // Sync ke GAS jalan di background, user tidak perlu nunggu
-  await dbAdd('entries', entry);
-
-  // Langsung tutup modal & kasih konfirmasi — TANPA nunggu GAS
+  // ── OPTIMISTIC SAVE: tutup UI DULU, semua proses di background ──
   closeModal('previewModal');
   btn.disabled=false; btn.textContent='Simpan Sekarang';
 
@@ -1849,8 +1848,12 @@ async function submitEntry(){
   resetForm(); renderHome(); updateKurangBadge();
 
   // ── BACKGROUND SYNC ke GAS (tidak blokir UI) ──
+  // Background: simpan lokal + sync GAS
+  setTimeout(function(){
+    dbAdd('entries', entry).catch(function(){});
+  }, 10);
+
   if(gasUrl){
-    // Pakai foto yang sudah di-snapshot sebelum reset
     const _pushFinal=Object.assign({},entry,{photo:_photoSnapshot1,photo2:_photoSnapshot2});
     setTimeout(function(){
       pushToSheets(_pushFinal).then(function(synced){
