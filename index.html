@@ -925,9 +925,10 @@ let _prodNameMap = {}; // map index → nama produk
 let _prodNameIndex = 0;
 let _entryMap = {}; // map index → entry object (untuk edit/hapus yang aman)
 let _entryIndex = 0;
-let _kurangMap = {}; // map index → kurang entry (untuk Update Resolusi)
+let _kurangMap = {};
 let _kurangIndex = 0;
 let _liveLoading = false;
+let _allKurangData = null; // semua history kurang dari sheet Kurang
 
 // ════════════════════════════════════════════════
 // DATE
@@ -1829,10 +1830,13 @@ async function submitEntry(){
   if(gasUrl){
     synced=await pushToSheets(_pushEntry);
     if(synced){
-      // FIX: cari entry berdasarkan orderId+timestamp, bukan all[0] yang bisa salah
-      const all=await dbGetAll('entries');
-      const saved=all.find(x=>x.orderId===entry.orderId&&x.timestamp===entry.timestamp);
-      if(saved) await dbPut('entries',{...saved,synced:true});
+      // Berhasil sync → hapus dari IndexedDB (sudah aman di Sheets)
+      // Ini mencegah auto-push ulang yang bikin duplikat
+      try{
+        const all=await dbGetAll('entries');
+        const saved=all.find(x=>x.orderId===entry.orderId&&x.timestamp===entry.timestamp);
+        if(saved&&saved.id) await dbDel('entries',saved.id);
+      }catch(e){}
     }
   }
 
@@ -3092,10 +3096,9 @@ function showToast(msg){
 function _doAutoSync(){
   if(!navigator.onLine||!gasUrl||document.hidden) return;
   if(_liveData.length>200) _liveData=_liveData.slice(0,200);
-  dbGetAll('entries').then(function(all){
-    var p=all.filter(function(e){return !e.synced;});
-    if(p.length>0) syncPending();
-  });
+  // Auto sync: HANYA pull, tidak auto-push
+  // Push hanya terjadi saat user submit entry baru
+  // Ini cegah duplikat dari multi-HP push ulang terus
   if(!_liveLoading) pullFromSheets(true);
 }
 setInterval(_doAutoSync,30000);
