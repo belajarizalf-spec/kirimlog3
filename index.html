@@ -3427,25 +3427,30 @@ function showToast(msg){
 // ════════════════════════════════════════════════
 // AUTO SYNC & PULL
 // ════════════════════════════════════════════════
-setInterval(function() {
-  // Hanya jalan jika ada koneksi internet dan URL Google Apps Script sudah diset
-  if (navigator.onLine && gasUrl) {
-    
-    // 1. Auto Push (Kirim data lokal yang pending ke Sheets)
-    dbGetAll('entries').then(function(all) {
-      const pending = all.filter(e => !e.synced);
-      if (pending.length > 0) {
-        console.log("Auto-pushing " + pending.length + " items...");
-        syncPending(); 
-      }
-    });
+function _doAutoSync(){
+  if(!navigator.onLine || !gasUrl) return;
+  // Auto Push — kirim pending entry ke Sheets
+  dbGetAll('entries').then(function(all){
+    var pending=all.filter(function(e){return !e.synced;});
+    if(pending.length>0) syncPending();
+  });
+  // Auto Pull — ambil data terbaru dari Sheets (silent)
+  if(!_liveLoading) pullFromSheets(true);
+}
 
-    // 2. Auto Pull (Ambil update terbaru dari Sheets tanpa memunculkan notif error/loading yang mengganggu)
-    if (!_liveLoading) {
-      pullFromSheets(true); // 'true' artinya mode silent (tanpa ubah UI loading)
-    }
-  }
-}, 60000); // 60000 ms = 1 menit (bisa disesuaikan)
+// 1. Interval 15 detik
+setInterval(_doAutoSync, 15000);
+
+// 2. Sync saat HP balik dari background / tab aktif kembali
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden) _doAutoSync();
+});
+
+// 3. Sync saat koneksi internet balik
+window.addEventListener('online', function(){
+  showToast('🌐 Online — sync data...');
+  setTimeout(_doAutoSync, 1000);
+});
 
 // ════════════════════════════════════════════════
 // START
