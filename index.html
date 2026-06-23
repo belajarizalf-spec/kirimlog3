@@ -1316,7 +1316,8 @@ async function buildPickerDropdown(triggerBtn, wrapEl){
   dropdown.appendChild(listEl);
 
   const renderList=async(q)=>{
-    const allProds=await dbGetAll('products');
+    // Pakai cache _liveProduk kalau ada, hindari dbGetAll tiap buka picker
+    const allProds=_liveProduk.length>0 ? _liveProduk : await dbGetAll('products');
     const filtered=q?allProds.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())||p.category.toLowerCase().includes(q.toLowerCase())):allProds;
     const groups={};
     filtered.sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
@@ -1401,127 +1402,127 @@ document.addEventListener('click',function(e){
 // ════════════════════════════════════════════════
 async function addProdRow(){
   prodRowCount++;
+  const currentCount=document.querySelectorAll('#prodList .item-row').length+1;
+  const idx=prodRowCount;
+
+  // Buat row dengan innerHTML - lebih cepat dari createElement chain
   const row=document.createElement('div');
   row.className='item-row';
+  row.dataset.idx=idx;
+  row.innerHTML=
+    '<span class="item-badge">Barang '+currentCount+'</span>'+
+    '<div class="item-grid prod-g">'+
+      '<div class="picker-wrap">'+
+        '<button class="picker-trigger empty" data-field="prodName" data-value="" onclick="_openPicker(this,event)">Pilih produk...</button>'+
+      '</div>'+
+      '<div class="qty-w">'+
+        '<input class="inp qty-inp" type="number" min="1" value="1" inputmode="numeric">'+
+        '<span class="qty-unit">pcs</span>'+
+      '</div>'+
+      '<button class="btn-rm" onclick="_rmProdRow(this)">'+
+        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>'+
+      '</button>'+
+    '</div>';
 
-  const badge=document.createElement('span');
-  badge.className='item-badge';
-  // Nomor berdasarkan posisi aktual di DOM, bukan counter global
-  const currentCount=document.querySelectorAll('#prodList .item-row').length+1;
-  badge.textContent='Barang '+currentCount;
-  row.dataset.idx=prodRowCount;
-  row.appendChild(badge);
-
-  const grid=document.createElement('div');
-  grid.className='item-grid prod-g';
-  row.appendChild(grid);
-
-  // Picker
-  const pickerWrap=await createPickerTrigger(row,'prodName','');
-  grid.appendChild(pickerWrap);
-
-  // Qty
-  const qtyW=document.createElement('div');
-  qtyW.className='qty-w';
-  const qtyInp=document.createElement('input');
-  qtyInp.className='inp qty-inp';
-  qtyInp.type='number';qtyInp.min='1';qtyInp.value='1';
-  qtyInp.setAttribute('inputmode','numeric');
-  qtyInp.oninput=updateSummaryBar;
-  const qtyUnit=document.createElement('span');
-  qtyUnit.className='qty-unit';qtyUnit.textContent='pcs';
-  qtyW.appendChild(qtyInp);qtyW.appendChild(qtyUnit);
-  grid.appendChild(qtyW);
-
-  // Remove
-  const rmBtn=document.createElement('button');
-  rmBtn.className='btn-rm';rmBtn.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
-  rmBtn.onclick=function(){
-    if(document.querySelectorAll('#prodList .item-row').length<=1){showToast('Minimal 1 barang');return;}
-    row.remove(); renumberRows('prodList','Barang'); updateSummaryBar();
-  };
-  grid.appendChild(rmBtn);
+  // Attach qty event
+  row.querySelector('.qty-inp').oninput=updateSummaryBar;
 
   document.getElementById('prodList').appendChild(row);
   updateSummaryBar();
 }
 
+function _rmProdRow(btn){
+  const row=btn.closest('.item-row');
+  if(document.querySelectorAll('#prodList .item-row').length<=1){showToast('Minimal 1 barang');return;}
+  row.remove(); renumberRows('prodList','Barang'); updateSummaryBar();
+}
+
+function _openPicker(btn, e){
+  e.stopPropagation();
+  // Close other pickers
+  document.querySelectorAll('.picker-dropdown').forEach(function(d){
+    if(d._ownerBtn) d._ownerBtn._dropdownOpen=false;
+    d.remove();
+  });
+  if(btn._dropdownOpen){btn._dropdownOpen=false;return;}
+  const row=btn.closest('.item-row');
+  openPickerRow=row;
+  buildPickerDropdown(btn, btn.closest('.picker-wrap')).then(function(dropdown){
+    requestAnimationFrame(function(){
+      const rect=btn.getBoundingClientRect();
+      if(!rect.width){dropdown.remove();return;}
+      const spaceBelow=window.innerHeight-rect.bottom;
+      const spaceAbove=rect.top;
+      const dropH=Math.min(280,Math.max(spaceBelow,spaceAbove)-12);
+      dropdown.style.cssText='position:fixed;left:'+rect.left+'px;width:'+rect.width+'px;z-index:9000;max-height:'+dropH+'px;overflow-y:auto;';
+      if(spaceBelow>=180||spaceBelow>=spaceAbove){dropdown.style.top=(rect.bottom+4)+'px';}
+      else{dropdown.style.bottom=(window.innerHeight-rect.top+4)+'px';}
+      document.body.appendChild(dropdown);
+      btn._dropdownOpen=true;
+      dropdown._ownerBtn=btn;
+      const si=dropdown.querySelector('.picker-search');
+      if(si) setTimeout(function(){si.focus();},50);
+      const obs=new MutationObserver(function(){
+        if(!document.body.contains(dropdown)){btn._dropdownOpen=false;obs.disconnect();}
+      });
+      obs.observe(document.body,{childList:true,subtree:false});
+    });
+  });
+}
+
 async function addMissRow(){
   missRowCount++;
+  const currentMissCount=document.querySelectorAll('#missList .item-row').length+1;
   const row=document.createElement('div');
   row.className='item-row kurang-row';
   row.dataset.idx=missRowCount;
   row.dataset.resolusi='pending';
 
-  const badge=document.createElement('span');
-  badge.className='item-badge red';
-  const currentMissCount=document.querySelectorAll('#missList .item-row').length+1;
-  badge.textContent='Barang Kurang '+currentMissCount;
-  row.appendChild(badge);
-
-  const grid=document.createElement('div');
-  grid.className='item-grid miss-g';
-  row.appendChild(grid);
-
-  const pickerWrap=await createPickerTrigger(row,'missName','');
-  grid.appendChild(pickerWrap);
-
-  // Qty missing
-  const mkW=document.createElement('div');mkW.className='qty-w';
-  const mkI=document.createElement('input');mkI.className='inp qty-inp';mkI.type='number';mkI.min='1';mkI.value='1';mkI.setAttribute('inputmode','numeric');
-  const mkU=document.createElement('span');mkU.className='qty-unit';mkU.textContent='kur';
-  mkW.appendChild(mkI);mkW.appendChild(mkU);grid.appendChild(mkW);
-
-  // Qty total
-  const mtW=document.createElement('div');mtW.className='qty-w';
-  const mtI=document.createElement('input');mtI.className='inp qty-inp';mtI.type='number';mtI.min='1';mtI.value='1';mtI.setAttribute('inputmode','numeric');
-  const mtU=document.createElement('span');mtU.className='qty-unit';mtU.textContent='ttl';
-  mtW.appendChild(mtI);mtW.appendChild(mtU);grid.appendChild(mtW);
-
-  // Remove
-  const rmBtn=document.createElement('button');rmBtn.className='btn-rm';rmBtn.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
-  rmBtn.onclick=function(){
-    if(document.querySelectorAll('#missList .item-row').length<=1){showToast('Minimal 1 barang');return;}
-    row.remove(); renumberRows('missList','Barang Kurang'); updateSummaryBar();
-  };
-  grid.appendChild(rmBtn);
-
-  // Resolusi
-  const resLbl=document.createElement('div');resLbl.className='res-label-txt';resLbl.textContent='Resolusi Pelanggan';
-  row.appendChild(resLbl);
-
-  const resBtns=document.createElement('div');resBtns.className='res-btns';
-  const resData=[
-    {val:'pending', label:'Belum Ditentukan',
-     icon:'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'},
-    {val:'menyusul', label:'Menyusul',
-     icon:'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>'},
-    {val:'refund', label:'Refund',
-     icon:'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'},
-  ];
-  resData.forEach(function(d){
-    const b=document.createElement('button');
-    b.className='res-btn'+(d.val==='pending'?' sel-pending':'');
-    b.innerHTML=d.icon+'<span>'+d.label+'</span>';
-    b.onclick=function(){
-      row.querySelectorAll('.res-btn').forEach(function(x){x.className='res-btn';});
-      b.classList.add('sel-'+d.val);
-      row.dataset.resolusi=d.val;
-      const rw=row.querySelector('.resi-susulan-wrap');
-      if(rw) rw.style.display=d.val==='menyusul'?'block':'none';
-    };
-    resBtns.appendChild(b);
-  });
-  row.appendChild(resBtns);
-
-  const resiWrap=document.createElement('div');resiWrap.className='resi-susulan-wrap';
-  const resiInp=document.createElement('input');resiInp.className='inp resi-susulan-inp';resiInp.type='text';resiInp.placeholder='No. resi pengiriman susulan...';resiInp.style.marginTop='7px';
-  resiWrap.appendChild(resiInp);
-  row.appendChild(resiWrap);
+  row.innerHTML=
+    '<span class="item-badge red">Barang Kurang '+currentMissCount+'</span>'+
+    '<div class="item-grid miss-g">'+
+      '<div class="picker-wrap" style="grid-column:1/-1">'+
+        '<button class="picker-trigger empty" style="width:100%;min-height:54px;border-radius:18px;padding:14px 42px 14px 16px;font-size:15px;background:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" data-field="missName" data-value="" onclick="_openPicker(this,event)">Pilih produk kurang...</button>'+
+      '</div>'+
+      '<div class="qty-w"><input class="inp qty-inp" style="height:50px;border-radius:16px;background:#fff;font-size:18px" type="number" min="1" value="1" inputmode="numeric"><span class="qty-unit">kur</span></div>'+
+      '<div class="qty-w"><input class="inp qty-inp" style="height:50px;border-radius:16px;background:#fff;font-size:18px" type="number" min="1" value="1" inputmode="numeric"><span class="qty-unit">ttl</span></div>'+
+      '<button class="btn-rm" style="width:48px;height:50px;border-radius:16px" onclick="_rmMissRow(this)">'+
+        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>'+
+      '</button>'+
+    '</div>'+
+    '<div class="res-label-txt">Resolusi Pelanggan</div>'+
+    '<div class="res-btns">'+
+      '<button class="res-btn sel-pending" data-res="pending" onclick="_setResolusi(this,this.dataset.res)">'+
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'+
+        '<span>Belum</span></button>'+
+      '<button class="res-btn" data-res="menyusul" onclick="_setResolusi(this,this.dataset.res)">'+
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>'+
+        '<span>Menyusul</span></button>'+
+      '<button class="res-btn" data-res="refund" onclick="_setResolusi(this,this.dataset.res)">'+
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'+
+        '<span>Refund</span></button>'+
+    '</div>'+
+    '<div class="resi-susulan-wrap" style="display:none"><input class="inp resi-susulan-inp" type="text" placeholder="No. resi pengiriman susulan..." style="margin-top:7px"></div>';
 
   document.getElementById('missList').appendChild(row);
   updateSummaryBar();
 }
+
+function _rmMissRow(btn){
+  const row=btn.closest('.item-row');
+  if(document.querySelectorAll('#missList .item-row').length<=1){showToast('Minimal 1 barang');return;}
+  row.remove(); renumberRows('missList','Barang Kurang'); updateSummaryBar();
+}
+
+function _setResolusi(btn, val){
+  const row=btn.closest('.item-row');
+  row.querySelectorAll('.res-btn').forEach(function(x){x.className='res-btn';});
+  btn.classList.add('sel-'+val);
+  row.dataset.resolusi=val;
+  const rw=row.querySelector('.resi-susulan-wrap');
+  if(rw) rw.style.display=val==='menyusul'?'block':'none';
+}
+
 
 function renumberRows(containerId, prefix){
   document.querySelectorAll('#'+containerId+' .item-row').forEach((r,i)=>{
