@@ -417,7 +417,6 @@ textarea.inp{line-height:1.55}
 <body>
 <div class="app">
 
-<!-- TOPBAR -->
 <div class="topbar">
   <div class="logo">
     <div class="logo-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
@@ -432,10 +431,8 @@ textarea.inp{line-height:1.55}
   </div>
 </div>
 
-<!-- SCROLL -->
 <div class="scroll">
 
-  <!-- ═══ HOME ═══ -->
   <div class="page active" id="page-home">
     <div id="homeDate" style="font-size:12px;font-weight:600;color:var(--t3);margin-bottom:12px;margin-top:2px"></div>
     <div class="stats-grid">
@@ -449,7 +446,6 @@ textarea.inp{line-height:1.55}
       <span class="sec-link" onclick="pullFromSheets()">↻ Refresh</span>
     </div>
 
-    <!-- Phase 3: SaaS Intelligence Panel -->
     <div class="ops-panel" id="opsPanel">
       <div class="ops-panel-head">
         <div>
@@ -466,7 +462,6 @@ textarea.inp{line-height:1.55}
       </div>
     </div>
 
-    <!-- Top produk -->
     <div class="top-prod" id="topProdBox" style="display:none">
       <div class="sec-title" style="margin-bottom:10px">🔥 Top Produk Hari Ini</div>
       <div id="topProdList"></div>
@@ -478,7 +473,6 @@ textarea.inp{line-height:1.55}
     <div id="homeList"></div>
   </div>
 
-  <!-- ═══ INPUT ═══ -->
   <div class="page" id="page-input">
     <div class="card">
       <div class="card-hdr">
@@ -496,7 +490,6 @@ textarea.inp{line-height:1.55}
         <button type="button" class="scan-quick-btn" onclick="openLiveScanner('fOrder')">Scan</button>
       </div>
 
-      <!-- RESI -->
       <div style="margin-bottom:14px">
         <label class="lbl">Resi <span class="opt">(opsional)</span></label>
         <div style="display:flex;gap:6px">
@@ -506,7 +499,6 @@ textarea.inp{line-height:1.55}
         <div id="resiWarnDup" style="display:none;background:var(--amber-l);border:1px solid var(--amber-m);border-radius:8px;padding:8px 11px;font-size:11px;color:var(--amber);font-weight:600;margin-top:6px;line-height:1.4;gap:6px;align-items:flex-start"></div>
       </div>
 
-      <!-- FOTO 1 & 2 -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
         <div>
           <label class="lbl">Foto Produk <span class="req">*</span></label>
@@ -534,7 +526,6 @@ textarea.inp{line-height:1.55}
         </div>
       </div>
 
-      <!-- NO ORDERAN -->
       <div style="margin-bottom:14px">
         <label class="lbl">No. Orderan <span class="req">*</span></label>
         <div style="display:flex;gap:6px">
@@ -546,7 +537,6 @@ textarea.inp{line-height:1.55}
 
       <div class="form-step-label">Step 2 · Channel & Produk</div>
 
-      <!-- SUMBER ORDER -->
       <div class="field" style="margin-bottom:14px">
         <label class="lbl">Sumber Order <span class="req">*</span></label>
         <div class="ch-grid" id="channelGrid">
@@ -602,7 +592,6 @@ textarea.inp{line-height:1.55}
 
       <div class="form-step-label">Step 3 · Status & Review</div>
 
-      <!-- STATUS -->
       <div class="field">
         <label class="lbl">Status <span class="req">*</span></label>
         <div class="status-row">
@@ -611,7 +600,6 @@ textarea.inp{line-height:1.55}
         </div>
       </div>
 
-      <!-- BARANG KURANG -->
       <div class="miss-section" id="missSection">
         <label class="lbl" style="margin-bottom:8px">Barang yang Kurang <span class="req">*</span></label>
         <div class="col-heads mh">
@@ -624,13 +612,11 @@ textarea.inp{line-height:1.55}
         <button class="btn-add-row red-dash" onclick="addMissRow()">＋ Tambah Barang Kurang</button>
       </div>
 
-      <!-- CATATAN -->
       <div class="field" style="margin-top:14px">
         <label class="lbl">Catatan <span class="opt">(opsional)</span></label>
         <textarea class="inp" id="fNotes" placeholder="Catatan tambahan..." style="min-height:68px"></textarea>
       </div>
 
-      <!-- SUMMARY -->
       <div class="sum-strip" id="sumStrip">
         <div class="sum-chip"><b class="green" id="sumProd">0</b> produk</div>
         <div class="sum-div"></div>
@@ -648,7 +634,6 @@ textarea.inp{line-height:1.55}
     </div>
   </div>
 
-  <!-- ═══ RIWAYAT ═══ -->
   <div class="page" id="page-riwayat">
     <div class="page-hero compact">
       <div>
@@ -678,13 +663,11 @@ textarea.inp{line-height:1.55}
     <div id="riwayatList"></div>
   </div>
 
-  <!-- ═══ KURANG ═══ -->
   <div class="page" id="page-kurang">
     <div class="info-banner" style="background:var(--red-l);border:1px solid var(--red-m)">
       <span style="font-size:16px">⚠️</span>
       <span style="font-size:13px;font-weight:600;color:var(--red);line-height:1.5">Pesanan Tidak Lengkap — tap Update Resolusi untuk ubah status</span>
     </div>
-    <!-- FILTER BAR KURANG -->
     <div style="display:flex;gap:7px;margin-bottom:12px">
       <input class="inp" id="kurangSearch" placeholder="Cari no. order / produk..." oninput="renderKurang()" style="flex:1;font-size:13px;padding:10px 12px">
       <select class="filter-select" id="kurangFilter" onchange="renderKurang()" style="min-width:110px;padding:10px 28px 10px 11px;font-size:12px">
@@ -698,7 +681,6 @@ textarea.inp{line-height:1.55}
     <div id="kurangList"></div>
   </div>
 
-  <!-- ═══ MASTER PRODUK ═══ -->
   <div class="page" id="page-produk">
     <div class="page-hero compact">
       <div>
@@ -727,7 +709,6 @@ textarea.inp{line-height:1.55}
     <div id="produkList"></div>
   </div>
 
-  <!-- ═══ SETUP ═══ -->
   <div class="page" id="page-setup">
     <div class="setup-step">
       <div class="step-n">1</div>
@@ -769,10 +750,7 @@ textarea.inp{line-height:1.55}
     </div>
   </div>
 
-</div><!-- end scroll -->
-
-<!-- BOTTOM NAV -->
-<div class="nav nav-premium-icons">
+</div><div class="nav nav-premium-icons">
   <div class="ni active" id="nav-home" onclick="go('home')">
     <div class="ni-ico ni-img-wrap"><span class="ni-svg" aria-label="Beranda"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span></div>
     <span>Beranda</span>
@@ -792,10 +770,7 @@ textarea.inp{line-height:1.55}
   </div>
 </div>
 
-</div><!-- end app -->
-
-<!-- PREVIEW MODAL -->
-<div class="modal-bg" id="previewModal" onclick="closeModal('previewModal')">
+</div><div class="modal-bg" id="previewModal" onclick="closeModal('previewModal')">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title">Konfirmasi Pengiriman</div>
@@ -807,7 +782,6 @@ textarea.inp{line-height:1.55}
   </div>
 </div>
 
-<!-- DETAIL MODAL -->
 <div class="modal-bg" id="detailModal" onclick="closeModal('detailModal')">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -815,7 +789,6 @@ textarea.inp{line-height:1.55}
   </div>
 </div>
 
-<!-- UPDATE RESOLUSI MODAL -->
 <div class="modal-bg" id="updModal" onclick="closeModal('updModal')">
   <div class="modal" onclick="event.stopPropagation()" style="max-height:88dvh">
     <div class="modal-handle"></div>
@@ -823,7 +796,6 @@ textarea.inp{line-height:1.55}
   </div>
 </div>
 
-<!-- ADD/EDIT PRODUK MODAL -->
 <div class="modal-bg" id="produkModal" onclick="closeModal('produkModal')">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -847,7 +819,6 @@ textarea.inp{line-height:1.55}
   </div>
 </div>
 
-<!-- CONFIRM OVERLAY -->
 <div class="confirm-bg" id="confirmBg">
   <div class="confirm-box">
     <div class="confirm-ico" id="confirmIco"></div>
@@ -860,7 +831,6 @@ textarea.inp{line-height:1.55}
   </div>
 </div>
 
-<!-- ADMIN MODAL -->
 <div class="modal-bg" id="adminModal" onclick="closeModal('adminModal')">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -873,7 +843,6 @@ textarea.inp{line-height:1.55}
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1461,8 +1430,13 @@ function doGet(e) {
   if (action === "getData" || action === "getRows") {
     try {
       var sh = ss.getSheetByName("Data");
-      if (!sh || sh.getLastRow() < 2) return out({ok:true, rows:[]});
-      var data = sh.getRange(2, 1, sh.getLastRow()-1, DATA_HEADERS.length).getValues();
+      var lastRow = sh.getLastRow();
+      if (!sh || lastRow < 2) return out({ok:true, rows:[]});
+      
+      // Ambil semua, lalu potong hanya 500 baris paling bawah (paling baru)
+      var data = sh.getRange(2, 1, lastRow-1, DATA_HEADERS.length).getValues();
+      var data = data.slice(-500); // Hanya kembalikan 500 transaksi terakhir agar super cepat
+      
       var rows = data.map(function(r) {
         return {
           id:         r[0],
@@ -1910,7 +1884,7 @@ function updateSummaryBar(){
 // ════════════════════════════════════════════════
 async function onOrderInput(){
   const val=document.getElementById('fOrder').value.trim();
-  if(val.length!==6){document.getElementById('dupWarn').style.display='none';return;}
+  if(val.length<4){document.getElementById('dupWarn').style.display='none';return;}
   const all=await dbGetAll('entries');
   const dup=all.find(e=>e.orderId===val&&e.date===getNow().key);
   document.getElementById('dupWarn').style.display=dup?'block':'none';
@@ -2157,8 +2131,9 @@ async function submitEntry(){
   if(gasUrl){
     synced=await pushToSheets(entry);
     if(synced){
+      // FIX: cari entry berdasarkan orderId+timestamp, bukan all[0] yang bisa salah
       const all=await dbGetAll('entries');
-      const saved=all[0];
+      const saved=all.find(x=>x.orderId===entry.orderId&&x.timestamp===entry.timestamp);
       if(saved) await dbPut('entries',{...saved,synced:true});
     }
   }
@@ -3369,6 +3344,29 @@ function showToast(msg){
 }
 
 // ════════════════════════════════════════════════
+// AUTO SYNC & PULL
+// ════════════════════════════════════════════════
+setInterval(function() {
+  // Hanya jalan jika ada koneksi internet dan URL Google Apps Script sudah diset
+  if (navigator.onLine && gasUrl) {
+    
+    // 1. Auto Push (Kirim data lokal yang pending ke Sheets)
+    dbGetAll('entries').then(function(all) {
+      const pending = all.filter(e => !e.synced);
+      if (pending.length > 0) {
+        console.log("Auto-pushing " + pending.length + " items...");
+        syncPending(); 
+      }
+    });
+
+    // 2. Auto Pull (Ambil update terbaru dari Sheets tanpa memunculkan notif error/loading yang mengganggu)
+    if (!_liveLoading) {
+      pullFromSheets(true); // 'true' artinya mode silent (tanpa ubah UI loading)
+    }
+  }
+}, 60000); // 60000 ms = 1 menit (bisa disesuaikan)
+
+// ════════════════════════════════════════════════
 // START
 // ════════════════════════════════════════════════
 init().then(()=>{renderAdminSetup();initSwipeGestures();});
@@ -3377,7 +3375,6 @@ init().then(()=>{renderAdminSetup();initSwipeGestures();});
 
 
 
-<!-- LIVE SCANNER MODAL -->
 <div class="modal-bg" id="liveScanModal" style="align-items:flex-end">
   <div style="background:#000;width:100%;border-radius:20px 20px 0 0;padding:16px;max-height:92dvh;overflow:hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -3387,50 +3384,52 @@ init().then(()=>{renderAdminSetup();initSwipeGestures();});
     <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000">
       <video id="lsVideo" style="width:100%;display:block;border-radius:12px" playsinline autoplay muted></video>
       <canvas id="lsCanvas" style="display:none"></canvas>
-      <!-- Viewfinder overlay -->
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
         <div style="width:72%;max-width:280px;height:90px;position:relative">
-          <!-- Corners -->
           <div style="position:absolute;top:0;left:0;width:24px;height:24px;border-top:3px solid #3B82F6;border-left:3px solid #3B82F6;border-radius:3px 0 0 0"></div>
           <div style="position:absolute;top:0;right:0;width:24px;height:24px;border-top:3px solid #3B82F6;border-right:3px solid #3B82F6;border-radius:0 3px 0 0"></div>
           <div style="position:absolute;bottom:0;left:0;width:24px;height:24px;border-bottom:3px solid #3B82F6;border-left:3px solid #3B82F6;border-radius:0 0 0 3px"></div>
           <div style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-bottom:3px solid #3B82F6;border-right:3px solid #3B82F6;border-radius:0 0 3px 0"></div>
-          <!-- Scan line -->
           <div id="lsScanLine" style="position:absolute;left:0;right:0;height:2px;background:rgba(59,130,246,.8);box-shadow:0 0 6px #3B82F6;animation:scanline 1.8s ease-in-out infinite"></div>
         </div>
       </div>
-      <!-- Dark overlay outside viewfinder -->
       <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.5) 0%,transparent 25%,transparent 75%,rgba(0,0,0,.5) 100%);pointer-events:none"></div>
     </div>
-    <!-- Status -->
     <div id="lsStatus" style="color:#9CA3AF;font-size:13px;font-weight:600;text-align:center;margin:10px 0 6px">Arahkan barcode ke dalam kotak</div>
-    <!-- Manual input fallback -->
     <div style="display:flex;gap:8px;margin-top:4px">
-      <input id="lsManual" class="inp" placeholder="Atau ketik manual di sini..." style="flex:1;background:#1F2937;border-color:#374151;color:#fff;font-size:14px" onkeydown="if(event.key==='Enter')confirmLsManual()">
+      <input id="lsManual" class="inpplaceholder="Atau ketik manual di sini..." style="flex:1;background:#1F2937;border-color:#374151;color:#fff;font-size:14px" onkeydown="if(event.key==='Enter')confirmLsManual()">
       <button onclick="confirmLsManual()" style="padding:0 14px;background:#2563EB;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">Pakai</button>
     </div>
   </div>
 </div>
 
-
-
 <script>
 // ════════════════════════════════════════════════
-// LIVE BARCODE SCANNER
+// LIVE BARCODE SCANNER (FIXED)
 // ════════════════════════════════════════════════
 var _lsTarget = '';
 var _lsStream = null;
 var _lsInterval = null;
 var _lsLastResult = '';
 var _lsConfirmTimeout = null;
+var _lsBD = null;        // FIX: BarcodeDetector dibuat sekali, bukan tiap tick
+var _lsDetecting = false; // FIX: flag untuk cegah race condition
 
 function openLiveScanner(targetId){
   _lsTarget = targetId;
   _lsLastResult = '';
+  _lsDetecting = false;
   document.getElementById('lsManual').value = '';
   document.getElementById('lsStatus').style.color = '#9CA3AF';
   document.getElementById('lsStatus').textContent = 'Arahkan barcode ke dalam kotak';
   document.getElementById('liveScanModal').classList.add('open');
+
+  // FIX: Inisialisasi BarcodeDetector sekali di sini
+  if('BarcodeDetector' in window && !_lsBD){
+    try {
+      _lsBD = new BarcodeDetector({formats:['code_128','code_39','qr_code','ean_13','ean_8','itf','data_matrix','pdf417','aztec','codabar','upc_a','upc_e']});
+    } catch(e){ _lsBD = null; }
+  }
 
   navigator.mediaDevices.getUserMedia({
     video: { facingMode: {ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} }
@@ -3464,7 +3463,7 @@ function _lsTick(){
   ctx.drawImage(vid, 0, 0);
   var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  // Pakai jsQR
+  // jsQR (sync, prioritas utama)
   if(typeof jsQR !== 'undefined'){
     var code = jsQR(imageData.data, imageData.width, imageData.height, {inversionAttempts:'dontInvert'});
     if(code && code.data){
@@ -3473,12 +3472,13 @@ function _lsTick(){
     }
   }
 
-  // Fallback BarcodeDetector
-  if('BarcodeDetector' in window){
-    var bd = new BarcodeDetector({formats:['code_128','code_39','qr_code','ean_13','ean_8','itf','data_matrix','pdf417','aztec','codabar','upc_a','upc_e']});
-    bd.detect(canvas).then(function(barcodes){
+  // FIX: BarcodeDetector pakai instance yang sudah ada, dengan flag anti-race-condition
+  if(_lsBD && !_lsDetecting){
+    _lsDetecting = true;
+    _lsBD.detect(canvas).then(function(barcodes){
+      _lsDetecting = false;
       if(barcodes.length > 0) _lsGotResult(barcodes[0].rawValue);
-    }).catch(function(){});
+    }).catch(function(){ _lsDetecting = false; });
   }
 }
 
@@ -3486,14 +3486,12 @@ function _lsGotResult(val){
   if(!val || val === _lsLastResult) return;
   _lsLastResult = val;
 
-  // Update status
   var st = document.getElementById('lsStatus');
   st.style.color = '#22C55E';
   st.textContent = '✅ Terbaca: ' + val;
 
   if(navigator.vibrate) navigator.vibrate([60,30,60]);
 
-  // Auto confirm setelah 600ms
   clearTimeout(_lsConfirmTimeout);
   _lsConfirmTimeout = setTimeout(function(){
     _lsApply(val);
@@ -3521,6 +3519,7 @@ function confirmLsManual(){
 
 function closeLiveScanner(){
   clearTimeout(_lsConfirmTimeout);
+  _lsDetecting = false;
   if(_lsInterval){ clearInterval(_lsInterval); _lsInterval = null; }
   if(_lsStream){ _lsStream.getTracks().forEach(function(t){t.stop()}); _lsStream = null; }
   document.getElementById('liveScanModal').classList.remove('open');
