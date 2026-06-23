@@ -673,15 +673,14 @@ textarea.inp{line-height:1.55}
     <div style="display:flex;gap:7px;margin-bottom:8px">
       <input class="inp" id="kurangSearch" placeholder="Cari no. order / produk..." oninput="renderKurang()" style="flex:1;font-size:13px;padding:10px 12px">
     </div>
-    <div style="display:flex;gap:7px;margin-bottom:12px;align-items:center">
-      <span style="font-size:11px;color:var(--t3);font-weight:600;flex-shrink:0">Urutan:</span>
-      <select class="filter-select" id="kurangSort" onchange="renderKurang()" style="flex:1;padding:8px 28px 8px 11px;font-size:12px">
-        <option value="terbaru">Terbaru dulu</option>
-        <option value="terlama">Terlama dulu</option>
-        <option value="belum">Belum resolved dulu</option>
-      </select
-      <select class="filter-select" id="kurangFilter" onchange="renderKurang()" style="min-width:110px;padding:10px 28px 10px 11px;font-size:12px">
-        <option value="">Semua</option>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px">
+      <select class="filter-select" id="kurangSort" onchange="renderKurang()" style="width:100%;padding:8px 10px;font-size:12px">
+        <option value="terbaru">↓ Terbaru</option>
+        <option value="terlama">↑ Terlama</option>
+        <option value="belum">⚠ Belum dulu</option>
+      </select>
+      <select class="filter-select" id="kurangFilter" onchange="renderKurang()" style="width:100%;padding:8px 10px;font-size:12px">
+        <option value="">Semua status</option>
         <option value="pending">Belum</option>
         <option value="menyusul">Menyusul</option>
         <option value="refund">Refund</option>
@@ -1204,7 +1203,9 @@ function handlePhoto(e, previewId, zoneId, slot){
     const cv=document.createElement('canvas');
     const MAX=600; let w=img.width,h=img.height;
     if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
-    cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);
+    cv.width=w;cv.height=h;
+    const ctx=cv.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
     const b64=cv.toDataURL('image/jpeg',.65);
     if(slot===2){ photoB64_2=b64; } else { photoB64=b64; }
     document.getElementById(previewId||'photoPreview').src=b64;
@@ -2547,12 +2548,13 @@ function toggleResolved(btn){
 }
 
 async function updateKurangBadge(){
-  const all=_liveData;
-  // Hitung HANYA yang belum resolved
-  const n=all.filter(function(e){
-    if(e.status!=='kurang') return false;
+  // Pakai _allKurangData kalau ada (lebih lengkap), fallback ke _liveData
+  var source = _allKurangData !== null
+    ? _allKurangData
+    : _liveData.filter(function(e){ return e.status==='kurang'; });
+  const n=source.filter(function(e){
     var items=e.missingItems||[];
-    if(!items.length) return true; // kurang tanpa detail = belum resolved
+    if(!items.length) return true;
     return items.some(function(m){return !m.resolusi||m.resolusi==='pending';});
   }).length;
   const b=document.getElementById('kurangBadge');
