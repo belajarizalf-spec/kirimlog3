@@ -968,7 +968,7 @@ async function init(){
   if(!gasUrl && GAS_URL_DEFAULT){ gasUrl=GAS_URL_DEFAULT; localStorage.setItem('gasUrl',gasUrl); try{await cfgSet('gasUrl',gasUrl);}catch(e){} }
   console.log('KirimLog init, gasUrl:', gasUrl ? gasUrl.substring(0,50)+'...' : 'KOSONG');
   try { currentAdmin=await cfgGet('currentAdmin')||''; } catch(e){ currentAdmin=localStorage.getItem('currentAdmin')||''; }
-  if(gasUrl) document.getElementById('gasUrlInput').value=gasUrl;
+  var _gi=document.getElementById('gasUrlInput'); if(_gi&&gasUrl) _gi.value=gasUrl;
 
   // Seed default products if empty
   const prods=await dbGetAll('products');
@@ -1760,6 +1760,7 @@ async function submitEntry(){
     // Buat objek updated berdasarkan data lama + perubahan baru
     const updated={
       ...(eRef||{}),
+      _oldOrderId:(eRef&&eRef.orderId)||'', // untuk cari baris lama di GAS
       orderId:document.getElementById('fOrder').value.trim(),
       resi:document.getElementById('fResi').value.trim(),
       products:getProducts(),
@@ -2358,7 +2359,6 @@ async function addMissRowWithValue(m){
 // ════════════════════════════════════════════════
 // ALL KURANG HISTORY
 // ════════════════════════════════════════════════
-let _allKurangData=null;
 function fetchAllKurang(){
   if(!gasUrl) return;
   var btn=document.getElementById('btnRefreshKurang');
@@ -3022,7 +3022,13 @@ async function testConn(){
   showToast('✅ URL disimpan');
 }
 function copyGasCode(){navigator.clipboard.writeText(GAS_CODE).then(()=>showToast('✅ Kode tersalin!')).catch(()=>showToast('Gagal copy'));}
-function updateConnDot(){document.getElementById('connDot').classList.toggle('ok',!!gasUrl);}
+function updateConnDot(){
+  var dot=document.getElementById('syncDot');
+  var lbl=document.getElementById('syncLabel');
+  if(dot) dot.classList.toggle('ok',!!gasUrl);
+  if(lbl && !gasUrl) lbl.textContent='Belum terhubung ke Google Sheets';
+  else if(lbl && gasUrl && !_liveLoading) lbl.textContent='Terhubung ke Google Sheets';
+}
 
 // ════════════════════════════════════════════════
 // ADMIN
