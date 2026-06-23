@@ -1012,7 +1012,12 @@ async function init(){
 }
 
 // ── PULL DATA dari Sheets via JSONP ──
+var _lastPullTime=0;
 function pullFromSheets(silent){
+  // Debounce: jangan pull lebih dari sekali per 10 detik
+  var now=Date.now();
+  if(silent && now-_lastPullTime<10000) return;
+  _lastPullTime=now;
   if(!gasUrl) return;
   _liveLoading=true;
   if(!silent){
@@ -1118,9 +1123,15 @@ function _onPullData(data){
   });
   if(_liveData.length>200) _liveData=_liveData.slice(0,200);
   showToast('✅ Data diperbarui — '+_liveData.length+' pengiriman');
-  renderHome();
-  renderRiwayat();
-  renderKurang();
+  // Render HANYA tab yang aktif - jangan hang semua sekaligus
+  // Skip render kalau user sedang di form input (cegah interrupt)
+  var _activePage = document.querySelector('.page.active');
+  var _activeId = _activePage ? _activePage.id : '';
+  if(_activeId === 'page-home') { renderHome(); }
+  else if(_activeId === 'page-riwayat') { renderRiwayat(); }
+  else if(_activeId === 'page-kurang') { renderKurang(); }
+  else if(_activeId === 'page-input') { /* skip - user sedang input */ }
+  else { renderHome(); }
   updateKurangBadge();
   // Update sync dot
   const dot=document.getElementById('syncDot');
@@ -2038,12 +2049,19 @@ async function renderRiwayat(){
     return;
   }
 
+  // Batasi 50 entry untuk cegah hang saat render
+  const LIMIT=50;
+  const limited=list.slice(0,LIMIT);
   const groups={};
-  list.forEach(e=>{if(!groups[e.date])groups[e.date]=[];groups[e.date].push(e);});
-  el.innerHTML=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
+  limited.forEach(e=>{if(!groups[e.date])groups[e.date]=[];groups[e.date].push(e);});
+  var html=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
     const label=groups[date][0].dateDisplay||date;
     return '<div class="sec-hdr"><span class="sec-title">'+label+'</span><span style="font-size:11px;color:var(--t3);font-weight:600">'+groups[date].length+' pengiriman</span></div>'+groups[date].map(e=>entryCardHTML(e)).join('');
   }).join('');
+  if(list.length>LIMIT){
+    html+='<div style="text-align:center;padding:14px;font-size:12px;color:var(--t3)">Menampilkan '+LIMIT+' dari '+list.length+' — gunakan pencarian untuk filter lebih spesifik</div>';
+  }
+  el.innerHTML=html;
 }
 
 function entryCardHTML(e){
@@ -3119,13 +3137,18 @@ function showToast(msg){
 function _doAutoSync(){
   if(!navigator.onLine||!gasUrl||document.hidden) return;
   if(_liveData.length>200) _liveData=_liveData.slice(0,200);
-  // Auto sync: HANYA pull, tidak auto-push
-  // Push hanya terjadi saat user submit entry baru
-  // Ini cegah duplikat dari multi-HP push ulang terus
+  // Skip sync kalau user sedang aktif input form - cegah hang
+  var _ap = document.querySelector('.page.active');
+  if(_ap && _ap.id === 'page-input') return;
   if(!_liveLoading) pullFromSheets(true);
 }
 setInterval(_doAutoSync,30000);
-document.addEventListener('visibilitychange',function(){if(!document.hidden)_doAutoSync();});
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden){
+    // Delay sedikit biar user bisa tap dulu sebelum sync mulai
+    setTimeout(_doAutoSync, 500);
+  }
+});
 window.addEventListener('online',function(){setTimeout(_doAutoSync,1000);});
 
 // ════════════════════════════════════════════════
