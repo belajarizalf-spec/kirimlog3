@@ -8,9 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="KirimLog">
 <title>KirimLog · Modern SaaS UI</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 /* ═══════════════════════════════════════════════════════
    KirimLog Design System v4 — 2026 Modern SaaS
@@ -39,8 +37,7 @@
 html,body{
   height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;
   background:linear-gradient(180deg,#FAF9F5 0%,var(--bg) 38%,#F3F2EE 100%);
-  color:var(--text);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;overscroll-behavior:none;
-  overflow-x:hidden;
+  color:var(--text);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;overscroll-behavior:none;overflow-x:hidden;
 }
 input,textarea,select,button{font-family:inherit}
 input[type=file]{display:none}
@@ -105,7 +102,7 @@ textarea.inp{line-height:1.55}
 .pz-ico{width:44px;height:44px;border-radius:14px;background:var(--surface-3);color:var(--blue);display:flex;align-items:center;justify-content:center}
 .pz-txt{font-size:12px;color:var(--t2);font-weight:500}
 .pz-txt b{color:var(--blue)}
-.retake{position:absolute;bottom:8px;right:8px;background:rgba(21,21,21,.82);color:#fff;border:none;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;display:none}
+.retake{position:absolute;bottom:8px;right:8px;background:rgba(21,21,21,.72);color:#fff;border:none;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;display:none}
 .photo-zone.has-photo .retake{display:block}
 
 /* SCAN CAMERA BUTTON */
@@ -274,7 +271,7 @@ textarea.inp{line-height:1.55}
 .prod-item-unit{font-size:11px;color:var(--t3)}
 
 /* MODAL / SHEET */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(21,21,21,.55);z-index:200;align-items:flex-end}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(21,21,21,.6);z-index:200;align-items:flex-end}
 .modal-bg.open{display:flex}
 .modal{background:var(--w);border-radius:26px 26px 0 0;padding:22px 20px;width:100%;max-height:92dvh;overflow-y:auto;box-shadow:0 -20px 48px rgba(22,24,29,.18);animation:slideUp .26s cubic-bezier(.32,.72,0,1)}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
@@ -289,7 +286,7 @@ textarea.inp{line-height:1.55}
 .modal-sec.red{color:var(--red)}
 
 /* CONFIRM OVERLAY */
-.confirm-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;align-items:center;justify-content:center;padding:20px}
+.confirm-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center;padding:20px;}
 .confirm-bg.open{display:flex}
 .confirm-box{background:var(--w);border:none;border-radius:24px;padding:24px 20px;width:100%;max-width:360px;text-align:center;box-shadow:0 22px 60px rgba(22,24,29,.22)}
 .confirm-ico{width:56px;height:56px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:26px}
@@ -668,20 +665,13 @@ textarea.inp{line-height:1.55}
     <div class="info-banner" style="background:var(--red-l);border:1px solid var(--red-m);display:flex;align-items:center;justify-content:space-between">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:16px">⚠️</span>
-        <span style="font-size:13px;font-weight:600;color:var(--red);line-height:1.5">Pesanan Tidak Lengkap</span>
+        <span style="font-size:13px;font-weight:600;color:var(--red)">Pesanan Tidak Lengkap</span>
       </div>
-      <button onclick="fetchAllKurang()" id="btnRefreshKurang" style="flex-shrink:0;background:var(--red);color:#fff;border:none;border-radius:10px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">↻ Muat Semua</button>
+      <button onclick="fetchAllKurang()" id="btnRefreshKurang" style="flex-shrink:0;background:var(--red);color:#fff;border:none;border-radius:10px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">↻ Semua</button>
     </div>
-    <div id="kurangSyncInfo" style="font-size:11px;color:var(--t3);text-align:center;margin:-2px 0 8px;display:none"></div>
+    <div id="kurangSyncInfo" style="font-size:11px;color:var(--t3);text-align:center;margin:4px 0 6px;display:none"></div>
     <div style="display:flex;gap:7px;margin-bottom:8px">
       <input class="inp" id="kurangSearch" placeholder="Cari no. order / produk..." oninput="renderKurang()" style="flex:1;font-size:13px;padding:10px 12px">
-      <select class="filter-select" id="kurangFilter" onchange="renderKurang()" style="min-width:110px;padding:10px 28px 10px 11px;font-size:12px">
-        <option value="">Semua</option>
-        <option value="pending">Belum</option>
-        <option value="menyusul">Menyusul</option>
-        <option value="refund">Refund</option>
-        <option value="resolved">✓ Resolved</option>
-      </select>
     </div>
     <div style="display:flex;gap:7px;margin-bottom:12px;align-items:center">
       <span style="font-size:11px;color:var(--t3);font-weight:600;flex-shrink:0">Urutan:</span>
@@ -689,6 +679,13 @@ textarea.inp{line-height:1.55}
         <option value="terbaru">Terbaru dulu</option>
         <option value="terlama">Terlama dulu</option>
         <option value="belum">Belum resolved dulu</option>
+      </select
+      <select class="filter-select" id="kurangFilter" onchange="renderKurang()" style="min-width:110px;padding:10px 28px 10px 11px;font-size:12px">
+        <option value="">Semua</option>
+        <option value="pending">Belum</option>
+        <option value="menyusul">Menyusul</option>
+        <option value="refund">Refund</option>
+        <option value="resolved">✓ Resolved</option>
       </select>
     </div>
     <div id="kurangList"></div>
@@ -930,7 +927,6 @@ let _entryMap = {}; // map index → entry object (untuk edit/hapus yang aman)
 let _entryIndex = 0;
 let _kurangMap = {}; // map index → kurang entry (untuk Update Resolusi)
 let _kurangIndex = 0;
-let _allKurangData = null; // semua history kurang dari sheet Kurang (null = belum di-fetch)
 let _liveLoading = false;
 
 // ════════════════════════════════════════════════
@@ -955,9 +951,7 @@ function getNow(){
 // ════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════
-// ══ HARDCODE GAS URL DI SINI agar tidak perlu setup ulang ══
-// Ganti nilai di bawah dengan URL deployment GAS kamu
-const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwTidFwhPu2jW1DNKlWizU7qz6pTFZe7ae5TbfejjXgKu8yhRD2SstuvaFcN8hOUcjl/exec';
+const GAS_URL_DEFAULT='https://script.google.com/macros/s/AKfycbwTidFwhPu2jW1DNKlWizU7qz6pTFZe7ae5TbfejjXgKu8yhRD2SstuvaFcN8hOUcjl/exec';
 
 async function init(){
   try {
@@ -966,17 +960,11 @@ async function init(){
     console.error('IndexedDB error:', dbErr);
     showToast('⚠ DB error - mode terbatas');
   }
-  // Prioritas: localStorage → IndexedDB → hardcoded default
+  // Jika dibuka dari GAS, URL otomatis tersedia
+  // Netlify: baca URL dari localStorage (primary) atau IndexedDB
   gasUrl = localStorage.getItem('gasUrl') || '';
-  if(!gasUrl){
-    try { gasUrl=await cfgGet('gasUrl')||''; } catch(e){}
-  }
-  // Fallback ke hardcoded URL jika semua kosong
-  if(!gasUrl && GAS_URL_DEFAULT){
-    gasUrl = GAS_URL_DEFAULT;
-    localStorage.setItem('gasUrl', gasUrl);
-    try { await cfgSet('gasUrl', gasUrl); } catch(e){}
-  }
+  if(!gasUrl){ try { gasUrl=await cfgGet('gasUrl')||''; } catch(e){} }
+  if(!gasUrl && GAS_URL_DEFAULT){ gasUrl=GAS_URL_DEFAULT; localStorage.setItem('gasUrl',gasUrl); try{await cfgSet('gasUrl',gasUrl);}catch(e){} }
   console.log('KirimLog init, gasUrl:', gasUrl ? gasUrl.substring(0,50)+'...' : 'KOSONG');
   try { currentAdmin=await cfgGet('currentAdmin')||''; } catch(e){ currentAdmin=localStorage.getItem('currentAdmin')||''; }
   if(gasUrl) document.getElementById('gasUrlInput').value=gasUrl;
@@ -1128,8 +1116,7 @@ function _onPullData(data){
       synced: true
     };
   });
-  // Limit _liveData ke 200 entry terbaru — kurangi RAM usage
-  if(_liveData.length > 200) _liveData = _liveData.slice(0, 200);
+  if(_liveData.length>200) _liveData=_liveData.slice(0,200);
   showToast('✅ Data diperbarui — '+_liveData.length+' pengiriman');
   renderHome();
   renderRiwayat();
@@ -1179,326 +1166,7 @@ function parseMissStr(kurangStr, resolusiStr){
 // ════════════════════════════════════════════════
 // GAS CODE (stored as string, no template literals)
 // ════════════════════════════════════════════════
-const GAS_CODE=`// KirimLog Apps Script v6
-// Tab Data kolom: ID | Tanggal | Jam | No Pesanan | Resi | Sumber | Admin | Status | Produk | Total Pcs | Barang Kurang | Resolusi | Catatan | Foto URL | Foto URL 2
-// Tab Kurang kolom: Tanggal | Jam | No Pesanan | Produk | Barang Kurang | Resolusi | Admin | Catatan
-// Tab Rekap kolom: Tanggal | Total | Lengkap | Kurang | % Lengkap | Total Pcs
-// Tab Produk kolom: Nama | Kategori | Satuan
-
-var DATA_HEADERS = ["ID","Tanggal","Jam","No Pesanan","Resi","Sumber","Admin","Status","Produk","Total Pcs","Barang Kurang","Resolusi","Catatan","Foto URL","Foto URL 2"];
-var KURANG_HEADERS = ["Tanggal","Jam","No Pesanan","Produk","Barang Kurang","Resolusi","Admin","Catatan"];
-var REKAP_HEADERS = ["Tanggal","Total","Lengkap","Kurang","% Lengkap","Total Pcs"];
-var PRODUK_HEADERS = ["Nama","Kategori","Satuan"];
-
-function uploadFoto(b64, filename, ss) {
-  if (!b64 || b64.length < 10) return "";
-  try {
-    var folder = DriveApp.getFoldersByName("KirimLog Foto").hasNext()
-      ? DriveApp.getFoldersByName("KirimLog Foto").next()
-      : DriveApp.createFolder("KirimLog Foto");
-    var clean = b64.replace(/^data:image\\/\\w+;base64,/, "");
-    var blob = Utilities.newBlob(Utilities.base64Decode(clean), "image/jpeg", filename);
-    var file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return file.getUrl();
-  } catch(e) { return ""; }
-}
-
-function buildProdStr(products) {
-  return (products||[]).map(function(p){ return p.name+" ("+p.qty+"pcs)"; }).join(" | ") || "-";
-}
-function buildKurangStr(items) {
-  return (items||[]).map(function(m){ return m.name+": "+m.qtyMissing+" kurang dari "+m.qtyTotal; }).join(" | ") || "-";
-}
-function buildResolusiStr(items) {
-  return (items||[]).map(function(m){
-    var r = m.resolusi||"pending";
-    return m.name+": "+(r==="menyusul"?"Menyusul"+(m.resiSusulan?" ("+m.resiSusulan+")":"") : r==="refund"?"Refund":"Belum");
-  }).join(" | ") || "-";
-}
-function totalPcs(products) {
-  return (products||[]).reduce(function(s,p){ return s+Number(p.qty); }, 0);
-}
-
-function getDataSheet(ss) {
-  var sh = ss.getSheetByName("Data") || ss.insertSheet("Data");
-  if (sh.getLastRow() === 0) sh.appendRow(DATA_HEADERS);
-  return sh;
-}
-function getKurangSheet(ss) {
-  var sh = ss.getSheetByName("Kurang") || ss.insertSheet("Kurang");
-  if (sh.getLastRow() === 0) sh.appendRow(KURANG_HEADERS);
-  return sh;
-}
-function getRekapSheet(ss) {
-  var sh = ss.getSheetByName("Rekap") || ss.insertSheet("Rekap");
-  if (sh.getLastRow() === 0) sh.appendRow(REKAP_HEADERS);
-  return sh;
-}
-function getProdukSheet(ss) {
-  var sh = ss.getSheetByName("Produk") || ss.insertSheet("Produk");
-  if (sh.getLastRow() === 0) sh.appendRow(PRODUK_HEADERS);
-  return sh;
-}
-
-// Cari baris di tab Data berdasarkan No Pesanan (kolom 4, index 3)
-function findDataRow(sh, orderId) {
-  var last = sh.getLastRow();
-  if (last < 2) return -1;
-  var vals = sh.getRange(2, 4, last-1, 1).getValues();
-  for (var i = 0; i < vals.length; i++) {
-    if (String(vals[i][0]).trim() === String(orderId).trim()) return i+2;
-  }
-  return -1;
-}
-
-// Cari baris di tab Kurang berdasarkan No Pesanan (kolom 3, index 2)
-function findKurangRow(sh, orderId) {
-  var last = sh.getLastRow();
-  if (last < 2) return -1;
-  var vals = sh.getRange(2, 3, last-1, 1).getValues();
-  for (var i = 0; i < vals.length; i++) {
-    if (String(vals[i][0]).trim() === String(orderId).trim()) return i+2;
-  }
-  return -1;
-}
-
-// Update Rekap: mode="add" tambah 1, mode="remove" kurang 1, mode="edit" ubah status lama ke baru
-function updateRekap(ss, date, status, tp, mode, oldStatus) {
-  var rs = getRekapSheet(ss);
-  var rows = rs.getDataRange().getValues();
-  tp = Number(tp)||0;
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]) === String(date)) {
-      var total = Number(rows[i][1]);
-      var ok    = Number(rows[i][2]);
-      var no    = Number(rows[i][3]);
-      var pcs   = Number(rows[i][5]);
-      if (mode === "add") {
-        total += 1;
-        if (status==="lengkap") ok+=1; else no+=1;
-        pcs += tp;
-      } else if (mode === "remove") {
-        total = Math.max(0, total-1);
-        if (status==="lengkap") ok=Math.max(0,ok-1); else no=Math.max(0,no-1);
-        pcs = Math.max(0, pcs-tp);
-      } else if (mode === "edit") {
-        // ubah status lama → baru (total & pcs tidak berubah)
-        if (oldStatus==="lengkap" && status==="kurang") { ok=Math.max(0,ok-1); no+=1; }
-        else if (oldStatus==="kurang" && status==="lengkap") { no=Math.max(0,no-1); ok+=1; }
-      }
-      var pct = total>0 ? Math.round(ok/total*100)+"%" : "0%";
-      rs.getRange(i+1, 2, 1, 5).setValues([[total, ok, no, pct, pcs]]);
-      return;
-    }
-  }
-  if (mode === "add") {
-    rs.appendRow([date, 1, status==="lengkap"?1:0, status==="kurang"?1:0, status==="lengkap"?"100%":"0%", tp]);
-  }
-}
-
-function doPost(e) {
-  try {
-    var d = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var action = d._action || "insertEntry";
-
-    // ── INSERT ENTRY BARU ──
-    if (action === "insertEntry" || (!action && !d._action)) {
-      var fotoUrl  = d.photo  ? uploadFoto(d.photo,  d.orderId+"_1_"+d.timestamp+".jpg", ss) : (d.fotoUrl||"");
-      var fotoUrl2 = d.photo2 ? uploadFoto(d.photo2, d.orderId+"_2_"+d.timestamp+".jpg", ss) : (d.fotoUrl2||"");
-      var sh = getDataSheet(ss);
-      var prodStr    = buildProdStr(d.products);
-      var kurangStr  = buildKurangStr(d.missingItems);
-      var resolusiStr= buildResolusiStr(d.missingItems);
-      var tp         = totalPcs(d.products);
-      sh.appendRow([sh.getLastRow(), d.date, d.time, d.orderId, d.resi||"-", d.sumber||"-", d.admin||"-", d.status, prodStr, tp, kurangStr, resolusiStr, d.notes||"-", fotoUrl, fotoUrl2]);
-      if (d.status==="kurang" && (d.missingItems||[]).length>0) {
-        var ks = getKurangSheet(ss);
-        ks.appendRow([d.date, d.time, d.orderId, prodStr, kurangStr, resolusiStr, d.admin||"-", d.notes||"-"]);
-      }
-      updateRekap(ss, d.date, d.status, tp, "add");
-      return ContentService.createTextOutput(JSON.stringify({ok:true, fotoUrl:fotoUrl, fotoUrl2:fotoUrl2})).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    // ── EDIT ENTRY ──
-    if (action === "editEntry") {
-      var sh = getDataSheet(ss);
-      var rowNum = findDataRow(sh, d.orderId);
-      var prodStr    = buildProdStr(d.products);
-      var kurangStr  = buildKurangStr(d.missingItems);
-      var resolusiStr= buildResolusiStr(d.missingItems);
-      var tp         = totalPcs(d.products);
-
-      // Upload foto baru jika ada, kalau tidak pakai yang lama
-      var fotoUrl  = d.photo  ? uploadFoto(d.photo,  d.orderId+"_1_"+Date.now()+".jpg", ss) : (d.fotoUrl||"");
-      var fotoUrl2 = d.photo2 ? uploadFoto(d.photo2, d.orderId+"_2_"+Date.now()+".jpg", ss) : (d.fotoUrl2||"");
-
-      if (rowNum > 0) {
-        var oldRow = sh.getRange(rowNum, 1, 1, DATA_HEADERS.length).getValues()[0];
-        var oldStatus = String(oldRow[7]||"lengkap"); // kolom 8 = Status
-        // Update baris
-        sh.getRange(rowNum, 1, 1, DATA_HEADERS.length).setValues([[
-          oldRow[0], d.date, d.time, d.orderId, d.resi||"-", d.sumber||"-", d.admin||"-",
-          d.status, prodStr, tp, kurangStr, resolusiStr, d.notes||"-", fotoUrl, fotoUrl2
-        ]]);
-        // Update Rekap jika status berubah
-        if (oldStatus !== d.status) updateRekap(ss, d.date, d.status, tp, "edit", oldStatus);
-      } else {
-        // Baris tidak ditemukan, insert baru
-        sh.appendRow([sh.getLastRow(), d.date, d.time, d.orderId, d.resi||"-", d.sumber||"-", d.admin||"-", d.status, prodStr, tp, kurangStr, resolusiStr, d.notes||"-", fotoUrl, fotoUrl2]);
-        updateRekap(ss, d.date, d.status, tp, "add");
-      }
-      // Update tab Kurang
-      var ks = getKurangSheet(ss);
-      var kRow = findKurangRow(ks, d.orderId);
-      if (d.status==="kurang" && (d.missingItems||[]).length>0) {
-        if (kRow > 0) {
-          ks.getRange(kRow, 1, 1, KURANG_HEADERS.length).setValues([[d.date, d.time, d.orderId, prodStr, kurangStr, resolusiStr, d.admin||"-", d.notes||"-"]]);
-        } else {
-          ks.appendRow([d.date, d.time, d.orderId, prodStr, kurangStr, resolusiStr, d.admin||"-", d.notes||"-"]);
-        }
-      } else if (kRow > 0) {
-        // Status sudah bukan kurang lagi, hapus dari tab Kurang
-        ks.deleteRow(kRow);
-      }
-      return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    // ── DELETE ENTRY ──
-    if (action === "deleteEntry") {
-      var sh = getDataSheet(ss);
-      var rowNum = findDataRow(sh, d.orderId);
-      if (rowNum > 0) {
-        var oldRow = sh.getRange(rowNum, 1, 1, DATA_HEADERS.length).getValues()[0];
-        var oldStatus = String(oldRow[7]||"lengkap");
-        var oldTp     = Number(oldRow[9]||0);
-        var oldDate   = String(oldRow[1]||d.date);
-        sh.deleteRow(rowNum);
-        updateRekap(ss, oldDate, oldStatus, oldTp, "remove");
-      }
-      // Hapus dari tab Kurang juga
-      var ks = getKurangSheet(ss);
-      var kRow = findKurangRow(ks, d.orderId);
-      if (kRow > 0) ks.deleteRow(kRow);
-      return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    // ── UPDATE RESOLUSI ──
-    if (action === "updateResolusi") {
-      var sh = getDataSheet(ss);
-      var rowNum = findDataRow(sh, d.orderId);
-      var kurangStr   = buildKurangStr(d.missingItems);
-      var resolusiStr = buildResolusiStr(d.missingItems);
-      if (rowNum > 0) {
-        sh.getRange(rowNum, 11, 1, 2).setValues([[kurangStr, resolusiStr]]); // kolom 11=Barang Kurang, 12=Resolusi
-      }
-      var ks = getKurangSheet(ss);
-      var kRow = findKurangRow(ks, d.orderId);
-      if (kRow > 0) {
-        var prodStr = buildProdStr(d.products);
-        ks.getRange(kRow, 1, 1, KURANG_HEADERS.length).setValues([[d.date, d.time, d.orderId, prodStr, kurangStr, resolusiStr, d.admin||"-", d.notes||"-"]]);
-      }
-      return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    // ── SAVE PRODUK ──
-    if (action === "saveProduk") {
-      var ps = getProdukSheet(ss);
-      var last = ps.getLastRow();
-      if (last > 1) {
-        var names = ps.getRange(2, 1, last-1, 1).getValues();
-        for (var i = 0; i < names.length; i++) {
-          if (String(names[i][0]).toLowerCase() === String(d.name||"").toLowerCase()) {
-            ps.getRange(i+2, 1, 1, 3).setValues([[d.name, d.category||"Lainnya", d.unit||"pcs"]]);
-            return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
-          }
-        }
-      }
-      ps.appendRow([d.name, d.category||"Lainnya", d.unit||"pcs"]);
-      return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    // ── DELETE PRODUK ──
-    if (action === "deleteProduk") {
-      var ps = getProdukSheet(ss);
-      var last = ps.getLastRow();
-      if (last > 1) {
-        var names = ps.getRange(2, 1, last-1, 1).getValues();
-        for (var i = names.length-1; i >= 0; i--) {
-          if (String(names[i][0]).toLowerCase() === String(d.name||"").toLowerCase()) {
-            ps.deleteRow(i+2); break;
-          }
-        }
-      }
-      return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    return ContentService.createTextOutput(JSON.stringify({ok:false,error:"Unknown action: "+action})).setMimeType(ContentService.MimeType.JSON);
-  } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({ok:false,error:err.message})).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function doGet(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var action = (e&&e.parameter&&e.parameter.action)||"getData";
-  var callback = e&&e.parameter&&e.parameter.callback;
-
-  function out(obj) {
-    var json = JSON.stringify(obj);
-    if (callback) return ContentService.createTextOutput(callback+"("+json+")").setMimeType(ContentService.MimeType.JAVASCRIPT);
-    return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  // ── GET DATA (semua entry) ──
-  if (action === "getData" || action === "getRows") {
-    try {
-      var sh = ss.getSheetByName("Data");
-      var lastRow = sh.getLastRow();
-      if (!sh || lastRow < 2) return out({ok:true, rows:[]});
-      
-      // Ambil semua, lalu potong hanya 500 baris paling bawah (paling baru)
-      var data = sh.getRange(2, 1, lastRow-1, DATA_HEADERS.length).getValues();
-      var data = data.slice(-500); // Hanya kembalikan 500 transaksi terakhir agar super cepat
-      
-      var rows = data.map(function(r) {
-        return {
-          id:         r[0],
-          tanggal:    r[1],
-          jam:        r[2],
-          noOrderan:  r[3],
-          resi:       r[4],
-          sumber:     r[5],
-          admin:      r[6],
-          status:     r[7],
-          produk:     r[8],
-          totalPcs:   r[9],
-          barangKurang: r[10],
-          resolusi:   r[11],
-          catatan:    r[12],
-          fotoUrl:    r[13],
-          fotoUrl2:   r[14]
-        };
-      }).filter(function(r){ return r.noOrderan; });
-      return out({ok:true, rows:rows});
-    } catch(err) { return out({ok:false, error:err.message}); }
-  }
-
-  // ── GET PRODUK ──
-  if (action === "getProduk") {
-    try {
-      var ps = ss.getSheetByName("Produk");
-      if (!ps || ps.getLastRow() < 2) return out({ok:true, products:[]});
-      var data = ps.getRange(2, 1, ps.getLastRow()-1, 3).getValues();
-      var products = data.map(function(r){ return {name:r[0], category:r[1]||"Lainnya", unit:r[2]||"pcs"}; })
-                        .filter(function(p){ return p.name; });
-      return out({ok:true, products:products});
-    } catch(err) { return out({ok:false, error:err.message}); }
-  }
-
-  return out({ok:true, message:"KirimLog API v6 OK"});
-}`.replace(/`/g,'\\`');
+const GAS_CODE='// Kode GAS ada di Google Apps Script kamu.';
 
 // ════════════════════════════════════════════════
 // NAVIGATION
@@ -1511,7 +1179,7 @@ function go(tab){
   if(ni) ni.classList.add('active');
   if(tab==='home') renderHome();
   if(tab==='riwayat') renderRiwayat();
-  if(tab==='kurang'){ renderKurang(); if(gasUrl && _allKurangData===null) fetchAllKurang(); }
+  if(tab==='kurang'){renderKurang();if(gasUrl&&_allKurangData===null)fetchAllKurang();}
   if(tab==='produk') renderProduk();
   closeAllPickers();
 }
@@ -1533,19 +1201,15 @@ function handlePhoto(e, previewId, zoneId, slot){
   const img=new Image(), url=URL.createObjectURL(f);
   img.onload=function(){
     const cv=document.createElement('canvas');
-    const MAX=600; // 600px cukup untuk verifikasi pengiriman, hemat memory maksimal
-    let w=img.width,h=img.height;
+    const MAX=600; let w=img.width,h=img.height;
     if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
-    cv.width=w;cv.height=h;
-    const ctx=cv.getContext('2d');
-    ctx.drawImage(img,0,0,w,h);
-    const b64=cv.toDataURL('image/jpeg',.65); // quality 65% — cukup jelas, file kecil
+    cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);
+    const b64=cv.toDataURL('image/jpeg',.65);
     if(slot===2){ photoB64_2=b64; } else { photoB64=b64; }
     document.getElementById(previewId||'photoPreview').src=b64;
     document.getElementById(zoneId||'photoZone').classList.add('has-photo');
-    // Cleanup: kosongkan canvas dan hapus reference
     ctx.clearRect(0,0,w,h);
-    cv.width=0; cv.height=0;
+    cv.width=0;cv.height=0;
     URL.revokeObjectURL(url);
   };
   img.src=url;
@@ -2143,9 +1807,8 @@ async function submitEntry(){
     btn.disabled=false; btn.textContent='Simpan Sekarang';
     showToast('✅ Pengiriman diupdate!');
     setTimeout(function(){ pullFromSheets(true); }, 1500);
-    resetForm(); renderHome(); updateKurangBadge();
-    // Refresh kurang data setelah submit
-    setTimeout(function(){ if(gasUrl) fetchAllKurang(); }, 2500);
+    photoB64='';photoB64_2='';
+  resetForm(); renderHome(); updateKurangBadge();
     return;
   }
 
@@ -2155,27 +1818,23 @@ async function submitEntry(){
     products:getProducts(),
     missingItems:curStatus==='kurang'?getMissingItems():[],
     notes:document.getElementById('fNotes').value.trim(),
-    status:curStatus, sumber:curSumber, admin:currentAdmin,
-    // JANGAN simpan foto di IndexedDB — terlalu besar, bikin OOM crash
-    // Foto hanya dikirim ke GAS sekali, lalu di-clear dari memory
-    photo:'', photo2:'',
+    status:curStatus, sumber:curSumber, admin:currentAdmin, photo:'', photo2:'',
     date:d.key, dateDisplay:d.disp, time:d.time, timestamp:d.iso, synced:false
   };
-  // Entry untuk push ke GAS pakai foto asli, tapi yang disimpan lokal tanpa foto
-  const entryWithPhoto={...entry, photo:photoB64, photo2:photoB64_2};
   await dbAdd('entries',entry);
+  // Push ke GAS dengan foto, tapi simpan lokal tanpa foto
+  const _pushEntry=Object.assign({},entry,{photo:photoB64,photo2:photoB64_2});
 
   let synced=false;
   if(gasUrl){
-    synced=await pushToSheets(entryWithPhoto);
+    synced=await pushToSheets(_pushEntry);
     if(synced){
+      // FIX: cari entry berdasarkan orderId+timestamp, bukan all[0] yang bisa salah
       const all=await dbGetAll('entries');
       const saved=all.find(x=>x.orderId===entry.orderId&&x.timestamp===entry.timestamp);
       if(saved) await dbPut('entries',{...saved,synced:true});
     }
   }
-  // Langsung clear foto dari memory setelah submit — cegah OOM
-  photoB64=''; photoB64_2='';
 
   closeModal('previewModal');
   btn.disabled=false; btn.textContent='Simpan Sekarang';
@@ -2568,9 +2227,7 @@ async function openEdit(idx){
   closeModal('detailModal');
 
   // Reset form dulu
-  // Jangan load foto lama ke memory — terlalu besar, bikin OOM
-  // Foto lama sudah ada di Drive, cukup pakai fotoUrl untuk preview
-  photoB64=''; photoB64_2='';
+  photoB64=e.photo||''; photoB64_2=e.photo2||'';
   curStatus=e.status;
   prodRowCount=0; missRowCount=0;
 
@@ -2693,82 +2350,60 @@ async function addMissRowWithValue(m){
 // ════════════════════════════════════════════════
 // KURANG
 // ════════════════════════════════════════════════
-async function fetchAllKurang(){
-  if(!gasUrl){ showToast('❗ GAS URL belum diset'); return; }
+
+// ════════════════════════════════════════════════
+// ALL KURANG HISTORY
+// ════════════════════════════════════════════════
+let _allKurangData=null;
+function fetchAllKurang(){
+  if(!gasUrl) return;
   var btn=document.getElementById('btnRefreshKurang');
   var info=document.getElementById('kurangSyncInfo');
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Memuat...'; }
-  if(info){ info.style.display='block'; info.textContent='Mengambil semua data kurang dari Sheets...'; }
-  var cbName='_cb_kurang_'+Date.now();
+  if(btn){btn.disabled=true;btn.textContent='⏳...';}
+  if(info){info.style.display='block';info.textContent='Mengambil semua history kurang...';}
+  var cb='_cbK'+Date.now();
   var s=document.createElement('script');
-  s.src=gasUrl+'?action=getKurang&callback='+cbName+'&t='+Date.now();
-  window[cbName]=function(data){
-    delete window[cbName]; s.remove();
-    if(btn){ btn.disabled=false; btn.textContent='↻ Muat Semua'; }
+  s.src=gasUrl+'?action=getKurang&callback='+cb+'&t='+Date.now();
+  window[cb]=function(data){
+    delete window[cb];s.remove();
+    if(btn){btn.disabled=false;btn.textContent='↻ Muat Semua';}
     if(data&&data.ok&&data.rows){
       _allKurangData=data.rows.map(function(r){
-        return {
-          orderId: r.noOrderan||r.orderId||'',
-          date: r.tanggal||r.date||'',
-          time: r.jam||r.time||'',
-          admin: r.admin||'-',
-          status: 'kurang',
-          products: parseProdStr(String(r.produk||'')),
-          missingItems: parseMissStr(String(r.barangKurang||''), String(r.resolusi||'')),
-          notes: r.catatan||''
-        };
+        return {orderId:r.noOrderan||'',date:r.tanggal||'',time:r.jam||'',admin:r.admin||'-',
+          status:'kurang',products:parseProdStr(String(r.produk||'')),
+          missingItems:parseMissStr(String(r.barangKurang||''),String(r.resolusi||'')),notes:r.catatan||''};
       });
-      if(info){ info.style.display='block'; info.textContent='✓ Menampilkan semua '+_allKurangData.length+' history kurang dari Sheets'; }
+      if(info){info.style.display='block';info.textContent='✓ '+_allKurangData.length+' history kurang';}
       renderKurang();
     } else {
-      if(info){ info.style.display='block'; info.textContent='⚠ Gagal muat — tampil data lokal'; }
-      showToast('⚠ Gagal ambil data kurang');
+      if(info){info.style.display='block';info.textContent='⚠ Gagal — tampil data lokal';}
     }
   };
-  s.onerror=function(){
-    delete window[cbName]; s.remove();
-    if(btn){ btn.disabled=false; btn.textContent='↻ Muat Semua'; }
-    if(info){ info.style.display='block'; info.textContent='⚠ Gagal muat — tampil data lokal'; }
-    showToast('⚠ Koneksi gagal');
-  };
+  s.onerror=function(){delete window[cb];s.remove();if(btn){btn.disabled=false;btn.textContent='↻ Muat Semua';}};
   document.head.appendChild(s);
 }
 
 async function renderKurang(){
-  // Pakai _allKurangData kalau sudah di-fetch, fallback ke _liveData
-  var sourceData;
-  if(_allKurangData !== null){
-    sourceData = _allKurangData;
-  } else {
-    sourceData = _liveData.filter(function(e){return e.status==='kurang';});
-  }
+  var sourceData=_allKurangData!==null?_allKurangData:_liveData.filter(function(e){return e.status==='kurang';});
   const all=sourceData;
   const kurang=all;
   const el=document.getElementById('kurangList');
-  if(!kurang || !kurang.length){el.innerHTML='<div class="empty"><div class="empty-svg"><svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" rx="20" fill="#EEFDF4"/><circle cx="40" cy="38" r="18" fill="#D8F8E5" stroke="#128A43" stroke-width="2"/><path d="M31 38L37 44L50 31" stroke="#128A43" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 62C28 62 40 56 52 62" stroke="#128A43" stroke-width="2" stroke-linecap="round"/></svg></div><div class="empty-title">Semua lengkap!</div><div class="empty-txt">Tidak ada barang kurang saat ini.<br>Kerja bagus! &#127881;</div></div>';return;}
+  if(!kurang.length){el.innerHTML='<div class="empty"><div class="empty-svg"><svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" rx="20" fill="#EEFDF4"/><circle cx="40" cy="38" r="18" fill="#D8F8E5" stroke="#128A43" stroke-width="2"/><path d="M31 38L37 44L50 31" stroke="#128A43" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 62C28 62 40 56 52 62" stroke="#128A43" stroke-width="2" stroke-linecap="round"/></svg></div><div class="empty-title">Semua lengkap!</div><div class="empty-txt">Tidak ada barang kurang saat ini.<br>Kerja bagus! &#127881;</div></div>';return;}
 
   const resLabel=function(r){return r==='menyusul'?'Menyusul':r==='refund'?'Refund':'Belum';};
   const resType=function(r){return r==='menyusul'?'p-menyusul':r==='refund'?'p-refund':'p-pending';};
 
-  // Ambil nilai filter & sort
-  const searchQ = (document.getElementById('kurangSearch')||{value:''}).value.toLowerCase().trim();
-  const filterRes = (document.getElementById('kurangFilter')||{value:''}).value;
-  const sortMode = (document.getElementById('kurangSort')||{value:'terbaru'}).value;
-
-  // Sort data
-  var sortedKurang = kurang.slice();
-  if(sortMode === 'terlama'){
-    sortedKurang.sort(function(a,b){ return (a.date+a.time).localeCompare(b.date+b.time); });
-  } else if(sortMode === 'belum'){
-    sortedKurang.sort(function(a,b){
-      var aRes=(a.missingItems||[]).every(function(m){return m.resolusi&&m.resolusi!=='pending';});
-      var bRes=(b.missingItems||[]).every(function(m){return m.resolusi&&m.resolusi!=='pending';});
-      return aRes===bRes?0:(aRes?1:-1);
-    });
-  } else {
-    // terbaru (default)
-    sortedKurang.sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); });
-  }
+  const searchQ=(document.getElementById('kurangSearch')||{value:''}).value.toLowerCase().trim();
+  const filterRes=(document.getElementById('kurangFilter')||{value:''}).value;
+  const sortMode=(document.getElementById('kurangSort')||{value:'terbaru'}).value;
+  var sortedKurang=kurang.slice();
+  if(sortMode==='terlama') sortedKurang.sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time);});
+  else if(sortMode==='belum') sortedKurang.sort(function(a,b){
+    var aR=(a.missingItems||[]).every(function(m){return m.resolusi&&m.resolusi!=='pending';});
+    var bR=(b.missingItems||[]).every(function(m){return m.resolusi&&m.resolusi!=='pending';});
+    return aR===bR?0:(aR?1:-1);
+  });
+  else sortedKurang.sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
 
   // Pisah: belum resolved vs sudah resolved
   _kurangMap={}; _kurangIndex=0;
@@ -3026,7 +2661,7 @@ async function saveUpdResolusi(ki){
     closeModal('updModal');
     showToast('✅ Resolusi tersimpan!');
     setTimeout(function(){ pullFromSheets(true); }, 1500);
-    setTimeout(function(){ if(gasUrl){ _allKurangData=null; fetchAllKurang(); } }, 2500);
+    setTimeout(function(){if(gasUrl){_allKurangData=null;fetchAllKurang();}},2500);
   } catch(err) {
     showToast('⚠ Gagal sync: '+err.message);
   }
@@ -3316,9 +2951,11 @@ async function syncPending(){
   showToast('Menyync '+pending.length+' data...');
   let ok=0;
   for(const e of pending){
-    const payload=Object.assign({},e,{_action:'insertEntry'});
+    const fresh=(await dbGetAll('entries')).find(x=>x.id===e.id);
+    if(fresh&&fresh.synced){ok++;continue;}
+    const payload=Object.assign({},e,{_action:'processData',photo:'',photo2:''});
     if(await pushToSheets(payload)){
-      await dbPut('entries',{...e,synced:true}); ok++;
+      await dbPut('entries',{...e,synced:true});ok++;
     }
   }
   showToast('✅ '+ok+'/'+pending.length+' berhasil sync');
@@ -3361,7 +2998,6 @@ async function saveGasUrl(){
   setTimeout(function(){
     pullFromSheets();
     pullProdukFromSheets();
-    if(_allKurangData===null) fetchAllKurang();
   }, 500);
 }
 async function testConn(){
@@ -3382,12 +3018,7 @@ async function testConn(){
   showToast('✅ URL disimpan');
 }
 function copyGasCode(){navigator.clipboard.writeText(GAS_CODE).then(()=>showToast('✅ Kode tersalin!')).catch(()=>showToast('Gagal copy'));}
-function updateConnDot(){
-  var dot=document.getElementById('connDot');
-  var lbl=document.getElementById('syncLabel');
-  dot.classList.toggle('ok',!!gasUrl);
-  if(!gasUrl && lbl) lbl.textContent='Belum terhubung ke Google Sheets';
-}
+function updateConnDot(){document.getElementById('connDot').classList.toggle('ok',!!gasUrl);}
 
 // ════════════════════════════════════════════════
 // ADMIN
@@ -3459,31 +3090,17 @@ function showToast(msg){
 // AUTO SYNC & PULL
 // ════════════════════════════════════════════════
 function _doAutoSync(){
-  if(!navigator.onLine || !gasUrl || document.hidden) return;
-  // Periodic memory cleanup
-  if(_liveData.length > 200) _liveData = _liveData.slice(0, 200);
-  // Auto Push — kirim pending entry ke Sheets
+  if(!navigator.onLine||!gasUrl||document.hidden) return;
+  if(_liveData.length>200) _liveData=_liveData.slice(0,200);
   dbGetAll('entries').then(function(all){
-    var pending=all.filter(function(e){return !e.synced;});
-    if(pending.length>0) syncPending();
+    var p=all.filter(function(e){return !e.synced;});
+    if(p.length>0) syncPending();
   });
-  // Auto Pull — ambil data terbaru dari Sheets (silent)
   if(!_liveLoading) pullFromSheets(true);
 }
-
-// 1. Interval 30 detik (lebih hemat battery & CPU di HP entry level)
-setInterval(_doAutoSync, 30000);
-
-// 2. Sync saat HP balik dari background / tab aktif kembali
-document.addEventListener('visibilitychange', function(){
-  if(!document.hidden) _doAutoSync();
-});
-
-// 3. Sync saat koneksi internet balik
-window.addEventListener('online', function(){
-  showToast('🌐 Online — sync data...');
-  setTimeout(_doAutoSync, 1000);
-});
+setInterval(_doAutoSync,30000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)_doAutoSync();});
+window.addEventListener('online',function(){setTimeout(_doAutoSync,1000);});
 
 // ════════════════════════════════════════════════
 // START
@@ -3491,10 +3108,7 @@ window.addEventListener('online', function(){
 init().then(()=>{
   renderAdminSetup();
   initSwipeGestures();
-  // Auto fetch semua kurang setelah app siap dan gasUrl tersedia
-  setTimeout(function(){
-    if(gasUrl && _allKurangData===null) fetchAllKurang();
-  }, 3000); // delay 3 detik supaya pullFromSheets selesai dulu
+  setTimeout(function(){if(gasUrl&&_allKurangData===null)fetchAllKurang();},3000);
 });
 </script>
 
@@ -3589,14 +3203,7 @@ function _lsTick(){
   ctx.drawImage(vid, 0, 0);
   var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  // jsQR (sync, prioritas utama)
-  if(typeof jsQR !== 'undefined'){
-    var code = jsQR(imageData.data, imageData.width, imageData.height, {inversionAttempts:'dontInvert'});
-    if(code && code.data){
-      _lsGotResult(code.data);
-      return;
-    }
-  }
+  // BarcodeDetector (primary scanner)
 
   // FIX: BarcodeDetector pakai instance yang sudah ada, dengan flag anti-race-condition
   if(_lsBD && !_lsDetecting){
