@@ -40,6 +40,7 @@ html,body{
   height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;
   background:linear-gradient(180deg,#FAF9F5 0%,var(--bg) 38%,#F3F2EE 100%);
   color:var(--text);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;overscroll-behavior:none;
+  overflow-x:hidden;
 }
 input,textarea,select,button{font-family:inherit}
 input[type=file]{display:none}
@@ -672,7 +673,7 @@ textarea.inp{line-height:1.55}
       <button onclick="fetchAllKurang()" id="btnRefreshKurang" style="flex-shrink:0;background:var(--red);color:#fff;border:none;border-radius:10px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">↻ Muat Semua</button>
     </div>
     <div id="kurangSyncInfo" style="font-size:11px;color:var(--t3);text-align:center;margin:-2px 0 8px;display:none"></div>
-    <div style="display:flex;gap:7px;margin-bottom:12px">
+    <div style="display:flex;gap:7px;margin-bottom:8px">
       <input class="inp" id="kurangSearch" placeholder="Cari no. order / produk..." oninput="renderKurang()" style="flex:1;font-size:13px;padding:10px 12px">
       <select class="filter-select" id="kurangFilter" onchange="renderKurang()" style="min-width:110px;padding:10px 28px 10px 11px;font-size:12px">
         <option value="">Semua</option>
@@ -680,6 +681,14 @@ textarea.inp{line-height:1.55}
         <option value="menyusul">Menyusul</option>
         <option value="refund">Refund</option>
         <option value="resolved">✓ Resolved</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:7px;margin-bottom:12px;align-items:center">
+      <span style="font-size:11px;color:var(--t3);font-weight:600;flex-shrink:0">Urutan:</span>
+      <select class="filter-select" id="kurangSort" onchange="renderKurang()" style="flex:1;padding:8px 28px 8px 11px;font-size:12px">
+        <option value="terbaru">Terbaru dulu</option>
+        <option value="terlama">Terlama dulu</option>
+        <option value="belum">Belum resolved dulu</option>
       </select>
     </div>
     <div id="kurangList"></div>
@@ -2118,6 +2127,8 @@ async function submitEntry(){
     showToast('✅ Pengiriman diupdate!');
     setTimeout(function(){ pullFromSheets(true); }, 1500);
     resetForm(); renderHome(); updateKurangBadge();
+    // Refresh kurang data setelah submit
+    setTimeout(function(){ if(gasUrl) fetchAllKurang(); }, 2500);
     return;
   }
 
@@ -2714,14 +2725,30 @@ async function renderKurang(){
   const resLabel=function(r){return r==='menyusul'?'Menyusul':r==='refund'?'Refund':'Belum';};
   const resType=function(r){return r==='menyusul'?'p-menyusul':r==='refund'?'p-refund':'p-pending';};
 
-  // Ambil nilai filter
+  // Ambil nilai filter & sort
   const searchQ = (document.getElementById('kurangSearch')||{value:''}).value.toLowerCase().trim();
   const filterRes = (document.getElementById('kurangFilter')||{value:''}).value;
+  const sortMode = (document.getElementById('kurangSort')||{value:'terbaru'}).value;
+
+  // Sort data
+  var sortedKurang = kurang.slice();
+  if(sortMode === 'terlama'){
+    sortedKurang.sort(function(a,b){ return (a.date+a.time).localeCompare(b.date+b.time); });
+  } else if(sortMode === 'belum'){
+    sortedKurang.sort(function(a,b){
+      var aRes=(a.missingItems||[]).every(function(m){return m.resolusi&&m.resolusi!=='pending';});
+      var bRes=(b.missingItems||[]).every(function(m){return m.resolusi&&m.resolusi!=='pending';});
+      return aRes===bRes?0:(aRes?1:-1);
+    });
+  } else {
+    // terbaru (default)
+    sortedKurang.sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); });
+  }
 
   // Pisah: belum resolved vs sudah resolved
   _kurangMap={}; _kurangIndex=0;
   var unresolved=[], resolved=[];
-  kurang.forEach(function(e){
+  sortedKurang.forEach(function(e){
     var ki=_kurangIndex++; _kurangMap[ki]=e;
     var allRes=(e.missingItems||[]).length>0 &&
       (e.missingItems||[]).every(function(m){return m.resolusi&&m.resolusi!=='pending';});
@@ -2974,6 +3001,7 @@ async function saveUpdResolusi(ki){
     closeModal('updModal');
     showToast('✅ Resolusi tersimpan!');
     setTimeout(function(){ pullFromSheets(true); }, 1500);
+    setTimeout(function(){ if(gasUrl){ _allKurangData=null; fetchAllKurang(); } }, 2500);
   } catch(err) {
     showToast('⚠ Gagal sync: '+err.message);
   }
@@ -3422,7 +3450,14 @@ setInterval(function() {
 // ════════════════════════════════════════════════
 // START
 // ════════════════════════════════════════════════
-init().then(()=>{renderAdminSetup();initSwipeGestures();});
+init().then(()=>{
+  renderAdminSetup();
+  initSwipeGestures();
+  // Auto fetch semua kurang setelah app siap dan gasUrl tersedia
+  setTimeout(function(){
+    if(gasUrl && _allKurangData===null) fetchAllKurang();
+  }, 3000); // delay 3 detik supaya pullFromSheets selesai dulu
+});
 </script>
 
 
