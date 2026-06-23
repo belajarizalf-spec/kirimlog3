@@ -1128,6 +1128,8 @@ function _onPullData(data){
       synced: true
     };
   });
+  // Limit _liveData ke 200 entry terbaru — kurangi RAM usage
+  if(_liveData.length > 200) _liveData = _liveData.slice(0, 200);
   showToast('✅ Data diperbarui — '+_liveData.length+' pengiriman');
   renderHome();
   renderRiwayat();
@@ -1531,13 +1533,13 @@ function handlePhoto(e, previewId, zoneId, slot){
   const img=new Image(), url=URL.createObjectURL(f);
   img.onload=function(){
     const cv=document.createElement('canvas');
-    const MAX=800; // Turun dari 1100 → 800px, lebih hemat memory HP entry level
+    const MAX=600; // 600px cukup untuk verifikasi pengiriman, hemat memory maksimal
     let w=img.width,h=img.height;
     if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
     cv.width=w;cv.height=h;
     const ctx=cv.getContext('2d');
     ctx.drawImage(img,0,0,w,h);
-    const b64=cv.toDataURL('image/jpeg',.72); // quality turun 0.80 → 0.72
+    const b64=cv.toDataURL('image/jpeg',.65); // quality 65% — cukup jelas, file kecil
     if(slot===2){ photoB64_2=b64; } else { photoB64=b64; }
     document.getElementById(previewId||'photoPreview').src=b64;
     document.getElementById(zoneId||'photoZone').classList.add('has-photo');
@@ -2153,21 +2155,27 @@ async function submitEntry(){
     products:getProducts(),
     missingItems:curStatus==='kurang'?getMissingItems():[],
     notes:document.getElementById('fNotes').value.trim(),
-    status:curStatus, sumber:curSumber, admin:currentAdmin, photo:photoB64, photo2:photoB64_2,
+    status:curStatus, sumber:curSumber, admin:currentAdmin,
+    // JANGAN simpan foto di IndexedDB — terlalu besar, bikin OOM crash
+    // Foto hanya dikirim ke GAS sekali, lalu di-clear dari memory
+    photo:'', photo2:'',
     date:d.key, dateDisplay:d.disp, time:d.time, timestamp:d.iso, synced:false
   };
+  // Entry untuk push ke GAS pakai foto asli, tapi yang disimpan lokal tanpa foto
+  const entryWithPhoto={...entry, photo:photoB64, photo2:photoB64_2};
   await dbAdd('entries',entry);
 
   let synced=false;
   if(gasUrl){
-    synced=await pushToSheets(entry);
+    synced=await pushToSheets(entryWithPhoto);
     if(synced){
-      // FIX: cari entry berdasarkan orderId+timestamp, bukan all[0] yang bisa salah
       const all=await dbGetAll('entries');
       const saved=all.find(x=>x.orderId===entry.orderId&&x.timestamp===entry.timestamp);
       if(saved) await dbPut('entries',{...saved,synced:true});
     }
   }
+  // Langsung clear foto dari memory setelah submit — cegah OOM
+  photoB64=''; photoB64_2='';
 
   closeModal('previewModal');
   btn.disabled=false; btn.textContent='Simpan Sekarang';
@@ -2560,7 +2568,9 @@ async function openEdit(idx){
   closeModal('detailModal');
 
   // Reset form dulu
-  photoB64=e.photo||''; photoB64_2=e.photo2||'';
+  // Jangan load foto lama ke memory — terlalu besar, bikin OOM
+  // Foto lama sudah ada di Drive, cukup pakai fotoUrl untuk preview
+  photoB64=''; photoB64_2='';
   curStatus=e.status;
   prodRowCount=0; missRowCount=0;
 
@@ -3450,6 +3460,8 @@ function showToast(msg){
 // ════════════════════════════════════════════════
 function _doAutoSync(){
   if(!navigator.onLine || !gasUrl || document.hidden) return;
+  // Periodic memory cleanup
+  if(_liveData.length > 200) _liveData = _liveData.slice(0, 200);
   // Auto Push — kirim pending entry ke Sheets
   dbGetAll('entries').then(function(all){
     var pending=all.filter(function(e){return !e.synced;});
