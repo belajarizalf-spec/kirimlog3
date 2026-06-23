@@ -2677,7 +2677,7 @@ async function fetchAllKurang(){
           time: r.jam||r.time||'',
           admin: r.admin||'-',
           status: 'kurang',
-          products: r.produk ? [{name:r.produk,qty:1}] : [],
+          products: parseProdStr(String(r.produk||'')),
           missingItems: parseMissStr(String(r.barangKurang||''), String(r.resolusi||'')),
           notes: r.catatan||''
         };
